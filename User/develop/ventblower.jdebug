@@ -1,0 +1,46 @@
+// Application-only Ozone debugging; build and flash through Device Tool.
+void OnProjectLoad(void) {
+    Project.SetDevice("GD32F470ZE");
+    Project.SetHostIF("USB", "");
+    Project.SetTargetIF("SWD");
+    Project.SetTIFSpeed("4 MHz");
+    Project.AddSvdFile("$(InstallDir)/Config/CPU/Cortex-M4F.svd");
+    Project.SetOSPlugin("FreeRTOSPlugin_Cortex-M");
+    File.Open("$(ProjectDir)/../../build/Debug/ventblower.elf");
+}
+
+// Use SYSRESETREQ; a reset-pin pulse did not clear the fault on this board.
+void AfterTargetConnect(void) {
+    Exec.Command("SetResetType = 0");
+}
+
+void BeforeTargetReset(void) {
+    Exec.Command("SetResetType = 0");
+}
+
+// Use the application vectors, not the stale image at the hardware reset base.
+void SetupApplication(void) {
+    unsigned int VectorTableAddr;
+    unsigned int SP;
+    unsigned int PC;
+
+    VectorTableAddr = 0x08010000;
+    SP = Target.ReadU32(VectorTableAddr);
+    PC = Target.ReadU32(VectorTableAddr + 4);
+    if ((SP <= 0x20000000) || (SP > 0x20030000) || ((SP & 7) != 0) ||
+        (PC < 0x08010001) || (PC >= 0x08100000) || ((PC & 1) == 0)) {
+        Util.Error("Invalid application vectors at 0x08010000. Build and flash with Device Tool.", 1);
+    } else {
+        Target.WriteU32(0xE000ED08, VectorTableAddr);
+        Target.SetReg("SP", SP);
+        Target.SetReg("PC", PC);
+    }
+}
+
+void AfterTargetReset(void) {
+    SetupApplication();
+}
+
+void AfterTargetDownload(void) {
+    SetupApplication();
+}

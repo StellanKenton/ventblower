@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "usernamehw.commands",
+    "ms-vscode.cmake-tools",
+    "ms-vscode.cpptools"
+  ]
+}

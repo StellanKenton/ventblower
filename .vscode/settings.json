@@ -1,0 +1,54 @@
+{
+  "commands.workspaceCommands": {
+    "Ventblower Build": {
+      "command": "workbench.action.tasks.runTask",
+      "args": "Device Tool: Build",
+      "icon": "tools",
+      "statusBar": {
+        "alignment": "left",
+        "text": " Build",
+        "name": "Ventblower Build",
+        "priority": 420,
+        "tooltip": "Build firmware with user/develop/device_tool.py in the integrated terminal."
+      }
+    },
+    "Ventblower Flash": {
+      "command": "workbench.action.tasks.runTask",
+      "args": "Device Tool: Flash",
+      "icon": "plug",
+      "statusBar": {
+        "alignment": "left",
+        "text": " Flash",
+        "name": "Ventblower Flash",
+        "priority": 419,
+        "tooltip": "Flash the target through J-Link in the integrated terminal."
+      }
+    },
+    "Ventblower Reset": {
+      "command": "workbench.action.tasks.runTask",
+      "args": "Device Tool: Reset",
+      "icon": "debug-restart",
+      "statusBar": {
+        "alignment": "left",
+        "text": " Reset",
+        "name": "Ventblower Reset",
+        "priority": 418,
+        "tooltip": "Reset and run the target through J-Link."
+      }
+    },
+    "Ventblower RTT": {
+      "command": "workbench.action.tasks.runTask",
+      "args": "Device Tool: RTT",
+      "icon": "terminal",
+      "statusBar": {
+        "alignment": "left",
+        "text": " RTT",
+        "name": "Ventblower RTT",
+        "priority": 417,
+        "tooltip": "Open an interactive J-Link RTT terminal. Keyboard input is forwarded to RTT."
+      }
+    }
+  },
+  "cmake.configureOnOpen": false,
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/build/Debug/compile_commands.json"
+}

@@ -1,0 +1,22 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "arm-gcc",
+      "displayName": "GD32F470 (ARM GNU Toolchain)",
+      "generator": "MinGW Makefiles",
+      "binaryDir": "${sourceDir}/build/arm-gcc",
+      "toolchainFile": "${sourceDir}/cmake/arm-none-eabi-gcc.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_MAKE_PROGRAM": "C:/Qt/Tools/mingw1310_64/bin/mingw32-make.exe"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "arm-gcc",
+      "configurePreset": "arm-gcc"
+    }
+  ]
+}

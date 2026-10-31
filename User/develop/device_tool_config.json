@@ -1,0 +1,114 @@
+{
+  "default_computer": "computer2",
+  "computers": {
+    "computer1": {
+      "description": "Current macOS development machine",
+      "os": "mac",
+      "hostnames": [
+        "Paper.local",
+        "Paper"
+      ],
+      "build": {
+        "type": "cmake",
+        "source_dir": ".",
+        "build_dir": "build/Debug",
+        "build_type": "Debug",
+        "generator": "Ninja",
+        "cmake": "/opt/homebrew/bin/cmake",
+        "ninja": "/opt/homebrew/bin/ninja",
+        "compiler_bin_dir": "/Applications/ArmGNUToolchain/15.2.rel1/bin",
+        "toolchain_file": "cmake/toolchains/arm-none-eabi.cmake",
+        "export_compile_commands": true,
+        "extra_configure_args": []
+      },
+      "flash_image": "build/Debug/vent-calib.hex",
+      "jlink": {
+        "device": "GD32F407VG",
+        "interface": "swd",
+        "speed_khz": 4000,
+        "serial_number": null,
+        "jlink_exe": "/usr/local/bin/JLinkExe",
+        "gdb_server": "/usr/local/bin/JLinkGDBServer",
+        "rtt_client": null,
+        "ports": {
+          "gdb": 2341,
+          "swo": 2342,
+          "telnet": 2343,
+          "rtt": 19031
+        }
+      }
+    },
+    "computer2": {
+      "description": "Current Windows development machine",
+      "os": "windows",
+      "hostnames": [
+        "WorkStation"
+      ],
+      "build": {
+        "type": "cmake",
+        "source_dir": ".",
+        "build_dir": "build/Debug",
+        "build_type": "Debug",
+        "generator": "Ninja",
+        "cmake": "C:/Program Files/CMake/bin/cmake.exe",
+        "ninja": "C:/Qt/Tools/Ninja/ninja.exe",
+        "compiler_bin_dir": "C:/Program Files (x86)/Arm/GNU Toolchain mingw-w64-i686-arm-none-eabi/bin",
+        "toolchain_file": "cmake/arm-none-eabi-gcc.cmake",
+        "export_compile_commands": true,
+        "extra_configure_args": []
+      },
+      "flash_image": "build/Debug/ventblower.hex",
+      "jlink": {
+        "device": "GD32F470ZE",
+        "interface": "swd",
+        "speed_khz": 4000,
+        "serial_number": null,
+        "jlink_exe": "C:/Program Files/SEGGER/JLink_V918/JLink.exe",
+        "gdb_server": "C:/Program Files/SEGGER/JLink_V918/JLinkGDBServerCL.exe",
+        "rtt_client": "C:/Program Files/SEGGER/JLink_V918/JLinkRTTClient.exe",
+        "ports": {
+          "gdb": 2341,
+          "swo": 2342,
+          "telnet": 2343,
+          "rtt": 19031
+        }
+      }
+    },
+    "computer3": {
+      "description": "Linux (WSL/container) development machine",
+      "os": "linux",
+      "hostnames": [
+        "Aurora"
+      ],
+      "build": {
+        "type": "cmake",
+        "source_dir": ".",
+        "build_dir": "build/Debug",
+        "build_type": "Debug",
+        "generator": "Ninja",
+        "cmake": "/usr/bin/cmake",
+        "ninja": "/usr/bin/ninja",
+        "compiler_bin_dir": "/usr/bin",
+        "toolchain_file": "cmake/arm-none-eabi-gcc.cmake",
+        "export_compile_commands": true,
+        "extra_configure_args": []
+      },
+      "flash_image": "build/Debug/ventblower.hex",
+      "jlink": {
+        "device": "GD32F470ZE",
+        "interface": "swd",
+        "speed_khz": 4000,
+        "serial_number": null,
+        "jlink_exe": "/usr/bin/JLinkExe",
+        "gdb_server": "/usr/bin/JLinkGDBServerCLExe",
+        "rtt_client": "/usr/bin/JLinkRTTClientExe",
+        "ports": {
+          "gdb": 2341,
+          "swo": 2342,
+          "telnet": 2343,
+          "rtt": 19031
+        }
+      }
+    }
+  }
+}

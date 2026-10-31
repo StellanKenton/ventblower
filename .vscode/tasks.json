@@ -1,0 +1,151 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Device Tool: Build",
+      "type": "shell",
+      "command": "python3",
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "${workspaceFolder}/user/develop/quick_deploy.py",
+          "build"
+        ]
+      },
+      "osx": {
+        "command": "python3"
+      },
+      "linux": {
+        "command": "python3"
+      },
+      "args": [
+        "${workspaceFolder}/user/develop/quick_deploy.py",
+        "build"
+      ],
+      "problemMatcher": [
+        "$gcc"
+      ],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "clear": true,
+        "showReuseMessage": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Device Tool: Flash",
+      "type": "shell",
+      "command": "python3",
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "${workspaceFolder}/user/develop/quick_deploy.py",
+          "flash"
+        ]
+      },
+      "osx": {
+        "command": "python3"
+      },
+      "linux": {
+        "command": "python3"
+      },
+      "args": [
+        "${workspaceFolder}/user/develop/quick_deploy.py",
+        "flash"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "clear": true,
+        "showReuseMessage": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "Device Tool: Reset",
+      "type": "shell",
+      "command": "python3",
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "${workspaceFolder}/user/develop/quick_deploy.py",
+          "reset"
+        ]
+      },
+      "osx": {
+        "command": "python3"
+      },
+      "linux": {
+        "command": "python3"
+      },
+      "args": [
+        "${workspaceFolder}/user/develop/quick_deploy.py",
+        "reset"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "clear": true,
+        "showReuseMessage": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    },
+    {
+      "label": "Device Tool: RTT",
+      "type": "shell",
+      "command": "python3",
+      "windows": {
+        "command": "py",
+        "args": [
+          "-3",
+          "${workspaceFolder}/user/develop/quick_deploy.py",
+          "rtt"
+        ]
+      },
+      "osx": {
+        "command": "python3"
+      },
+      "linux": {
+        "command": "python3"
+      },
+      "args": [
+        "${workspaceFolder}/user/develop/quick_deploy.py",
+        "rtt"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "dedicated",
+        "clear": false,
+        "showReuseMessage": false
+      },
+      "options": {
+        "cwd": "${workspaceFolder}"
+      }
+    }
+  ]
+}
