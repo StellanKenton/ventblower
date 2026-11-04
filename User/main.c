@@ -14,6 +14,8 @@
 #include "adc.h"
 #include "bspdebug.h"
 #include "dvalve.h"
+#include "hall.h"
+#include "pwm.h"
 #include "valve.h"
 
 int main(void)
@@ -35,6 +37,8 @@ int main(void)
     LOG_R("*****************************************");
     /* Bsp initialization */
     adcInit();
+    pwmInit();
+    hallInit();
     dvalveInit();
     valveInit();
 

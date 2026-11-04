@@ -32,6 +32,8 @@ add_executable(ventblower
     User/bsp/blower_vcm/blower_vcm.c
     User/bsp/dvalve/dvalve.c
     User/bsp/eeprom/m24512r.c
+    User/bsp/hall/hall.c
+    User/bsp/pwm/pwm.c
     User/bsp/sf06sdk/sensirion_common.c
     User/bsp/sf06sdk/sensirion_i2c.c
     User/bsp/sf06sdk/sensirion_i2c_hal.c
@@ -54,6 +56,7 @@ add_executable(ventblower
     Firmware/CMSIS/GD/GD32F4xx/Source/system_gd32f4xx.c
     Firmware/CMSIS/GD/GD32F4xx/Source/GCC/startup_gd32f470zetx.s
     Firmware/GD32F4xx_standard_peripheral/Source/gd32f4xx_adc.c
+    Firmware/GD32F4xx_standard_peripheral/Source/gd32f4xx_dbg.c
     Firmware/GD32F4xx_standard_peripheral/Source/gd32f4xx_dma.c
     Firmware/GD32F4xx_standard_peripheral/Source/gd32f4xx_gpio.c
     Firmware/GD32F4xx_standard_peripheral/Source/gd32f4xx_i2c.c
@@ -70,6 +73,8 @@ target_include_directories(ventblower PRIVATE
     User/bsp/blower_vcm
     User/bsp/dvalve
     User/bsp/eeprom
+    User/bsp/hall
+    User/bsp/pwm
     User/bsp/sf06sdk
     User/bsp/uart
     User/bsp/valve

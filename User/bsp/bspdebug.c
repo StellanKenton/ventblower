@@ -1,7 +1,7 @@
 /************************************************************************************
 * @file     : bspdebug.c
 * @brief    : BSP debug console command implementation.
-* @details  : Reads ADC channels and gets or sets digital valve states.
+* @details  : Reads phase current ADC samples and gets or sets digital valve states.
 * @author   :
 * @date     :
 * @version  :
@@ -21,23 +21,6 @@
 #include "valve.h"
 
 static const char *const gBspDebugTag = "bsp";
-
-static const char *const gBspDebugAdcNames[ADC_CH_COUNT] = {
-    "sfcur",
-    "flow",
-    "hw",
-    "3v3",
-    "temp",
-    "24v",
-    "peepcur",
-    "insp",
-    "5v",
-    "peep",
-    "exp",
-    "mdiff",
-    "o2cur",
-    "26v"
-};
 
 static const char *const gBspDebugValveNames[VALVE_COUNT] = {
     "insp",
@@ -167,14 +150,14 @@ static bool bspDebugUint16Parse(const char *token, uint32_t length, uint16_t max
  */
 static void bspDebugUsageShow(void)
 {
-    LOG_I(gBspDebugTag, "adc: bsp a|adc <sfcur|flow|hw|3v3|temp|24v|peepcur|insp|5v|peep|exp|mdiff|o2cur|26v>");
+    LOG_I(gBspDebugTag, "adc: bsp a|adc");
     LOG_I(gBspDebugTag, "valve: bsp v|valve <insp|exp|diff|flush> [0|1]");
     LOG_I(gBspDebugTag, "dvalve: bsp d|dv|dvalve <o2|relief|exp> <0-100>");
     LOG_I(gBspDebugTag, "blower: bsp blower <speed 0-800|pwm 0-100|stats>");
 }
 
 /**
- * @brief Handle an ADC value query.
+ * @brief Print the latest raw U/V/W phase current samples.
  * @param arguments Arguments following the ADC subcommand.
  * @return Console command result.
  */
@@ -182,19 +165,16 @@ static eConsoleCommandResult bspDebugAdcCommand(const char *arguments)
 {
     const char *lToken;
     uint32_t lLength;
-    int32_t lIndex;
 
-    if (!bspDebugTokenRead(&arguments, &lToken, &lLength)) {
-        bspDebugUsageShow();
-        return CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT;
-    }
-    lIndex = bspDebugNameFind(lToken, lLength, gBspDebugAdcNames, (uint32_t)ADC_CH_COUNT);
-    if ((lIndex < 0) || bspDebugTokenRead(&arguments, &lToken, &lLength)) {
+    if (bspDebugTokenRead(&arguments, &lToken, &lLength)) {
         bspDebugUsageShow();
         return CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT;
     }
 
-    LOG_I(gBspDebugTag, "adc %s %u", gBspDebugAdcNames[lIndex], (unsigned int)adc_value[lIndex]);
+    LOG_I(gBspDebugTag, "adc u %u v %u w %u",
+          (unsigned int)gAdcPhaseRaw[ADC_PHASE_U],
+          (unsigned int)gAdcPhaseRaw[ADC_PHASE_V],
+          (unsigned int)gAdcPhaseRaw[ADC_PHASE_W]);
     return CONSOLE_COMMAND_RESULT_OK;
 }
 

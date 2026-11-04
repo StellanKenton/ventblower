@@ -1,7 +1,7 @@
 /************************************************************************************
 * @file     : adc.h
-* @brief    : Board ADC continuous acquisition interface.
-* @details  : Defines ADC DMA buffer indexes and the initialization entry point.
+* @brief    : Board ADC phase current sampling interface.
+* @details  : Defines phase current indexes, the current loop hook and the initialization entry point.
 * @author   :
 * @date     :
 * @version  :
@@ -16,28 +16,36 @@
 extern "C" {
 #endif
 
-typedef enum eAdcChannelIndex {
-    ADC_IDX_SF_VALVE_CURRENT = 0,
-    ADC_IDX_SFM_FLOW,
-    ADC_IDX_HW_VERSION,
-    ADC_IDX_PCM_3V3,
-    ADC_IDX_OUT_TEMP,
-    ADC_IDX_24V,
-    ADC_IDX_PEEP_VALVE_CURRENT,
-    ADC_IDX_INSP_PRS,
-    ADC_IDX_AVDD5V,
-    ADC_IDX_EXP_PRS,    
-    ADC_IDX_PEEP_PRS,   
-    ADC_IDX_MDIFF_PRS,
-    ADC_IDX_O2_VALVE_CURRENT,
-    ADC_IDX_VDD_26V,
-    ADC_CH_COUNT
-} eAdcChannelIndex;
-// 硬件上以及旧ad中，peep和exp反
+/* Phase currents use one inserted channel per ADC so U/V/W are sampled together. */
+typedef enum eAdcPhase {
+    ADC_PHASE_U = 0,    /* PC5, ADC2 IN15 */
+    ADC_PHASE_V,        /* PB0, ADC0 IN8 */
+    ADC_PHASE_W,        /* PB1, ADC1 IN9 */
+    ADC_PHASE_COUNT
+} eAdcPhase;
 
-extern volatile uint16_t adc_value[ADC_CH_COUNT];
+/* Callback run in ADC_IRQHandler after each PWM-triggered current sample. */
+typedef void (*pfAdcCurrentCallback)(void);
 
+#define ADC_CURRENT_IRQ_PRIORITY    1U
+
+extern volatile uint16_t gAdcPhaseRaw[ADC_PHASE_COUNT];
+
+/**
+ * @brief Arm TIMER0 CH3 triggered phase current sampling.
+ * @note Current samples start once pwmInit() runs TIMER0.
+ */
 void adcInit(void);
+
+/**
+ * @brief Register the current loop hook.
+ * @param callback Hook called from ADC_IRQHandler, or NULL to detach.
+ * @note The hook runs above configMAX_SYSCALL_INTERRUPT_PRIORITY and must not call RTOS APIs.
+ */
+void adcCurrentCallbackSet(pfAdcCurrentCallback callback);
+
+/** @brief ADC0/1/2 shared interrupt entry point. */
+void ADC_IRQHandler(void);
 
 #ifdef __cplusplus
 }
