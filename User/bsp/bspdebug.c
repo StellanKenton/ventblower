@@ -1,7 +1,7 @@
 /************************************************************************************
 * @file     : bspdebug.c
 * @brief    : BSP debug console command implementation.
-* @details  : Reads phase current ADC samples and gets or sets digital valve states.
+* @details  : Reads raw ADC samples and gets or sets digital valve states.
 * @author   :
 * @date     :
 * @version  :
@@ -157,7 +157,7 @@ static void bspDebugUsageShow(void)
 }
 
 /**
- * @brief Print the latest raw U/V/W phase current samples.
+ * @brief Print the latest raw phase current, VBUS and NTC samples.
  * @param arguments Arguments following the ADC subcommand.
  * @return Console command result.
  */
@@ -171,10 +171,12 @@ static eConsoleCommandResult bspDebugAdcCommand(const char *arguments)
         return CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT;
     }
 
-    LOG_I(gBspDebugTag, "adc u %u v %u w %u",
-          (unsigned int)gAdcPhaseRaw[ADC_PHASE_U],
-          (unsigned int)gAdcPhaseRaw[ADC_PHASE_V],
-          (unsigned int)gAdcPhaseRaw[ADC_PHASE_W]);
+    LOG_I(gBspDebugTag, "adc iu %u iv %u iw %u vbus %u ntc %u",
+          (unsigned int)gAdcRaw[ADC_CH_IU],
+          (unsigned int)gAdcRaw[ADC_CH_IV],
+          (unsigned int)gAdcRaw[ADC_CH_IW],
+          (unsigned int)gAdcRaw[ADC_CH_VBUS],
+          (unsigned int)gAdcRaw[ADC_CH_NTC]);
     return CONSOLE_COMMAND_RESULT_OK;
 }
 
