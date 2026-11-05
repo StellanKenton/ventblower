@@ -1,7 +1,7 @@
 /************************************************************************************
 * @file     : sysdebug.c
 * @brief    : System debug console command implementation.
-* @details  : Provides MCU reboot, run-time, log link statistics and help commands.
+* @details  : Provides MCU reboot, run-time, log link statistics, task stack and help commands.
 * @author   :
 * @date     :
 * @version  :
@@ -13,6 +13,7 @@
 #include "gd32f4xx.h"
 #include "log.h"
 #include "rtos.h"
+#include "taskmanager.h"
 
 static const char *const gSysdebugTag = "sysdebug";
 
@@ -44,6 +45,14 @@ static int8_t sysdebugConsoleLog(const char *arguments)
     return CONSOLE_STATUS_OK;
 }
 
+static int8_t sysdebugConsoleTask(const char *arguments)
+{
+    (void)arguments;
+    taskManagerShowStats();
+
+    return CONSOLE_STATUS_OK;
+}
+
 static int8_t sysdebugConsoleHelp(const char *arguments)
 {
     (void)arguments;
@@ -56,6 +65,7 @@ static const stConsoleCommand gSysdebugConsoleCommands[] = {
     {"reboot", "Restart the MCU", sysdebugConsoleReboot},
     {"time", "Show system runtime in milliseconds", sysdebugConsoleTime},
     {"log", "Show dropped lines per log link", sysdebugConsoleLog},
+    {"task", "Show task stack and heap low-water marks", sysdebugConsoleTask},
     {"help", "Show all registered commands", sysdebugConsoleHelp},
 };
 

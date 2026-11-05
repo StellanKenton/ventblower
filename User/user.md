@@ -6,8 +6,8 @@ ventblower 是从 ventcore 拆出的风机（blower）控制工程，保留 GD32
 |---|---|
 | `main.c` | 初始化日志、注册控制台命令、初始化 ADC/PWM/霍尔/比例阀、注册 worker tasks 并启动调度器 |
 | `gd32f4xx_libopt.h` | GD32F4xx 标准外设库头文件选择 |
-| `app/system/taskmanager.*` | 通过 `WorkerTasksRegister()` 创建 defaultTask、SensorTask、SysTask；全部任务使用绝对周期 `DelayUntil`，defaultTask 每 10 ms 调用 `consoleProcess()` 处理控制台输入，SensorTask 每 3 ms 处理风机反馈与控制保活 |
-| `app/system/sysdebug.*` | 注册 `reboot`、`time`、`log`、`help` 控制台命令；`reboot` 先用 `consoleDrain()` 等最后几行发完再复位，`log` 打印各日志链路的丢行数 |
+| `app/system/taskmanager.*` | 通过 `WorkerTasksRegister()` 创建 defaultTask、SensorTask、SysTask；全部任务使用绝对周期 `DelayUntil`，defaultTask 每 10 ms 调用 `consoleProcess()` 处理控制台输入，SensorTask 每 3 ms 处理风机反馈与控制保活；栈大小（word）default 512 / sensor 384 / sys 128，按静态最坏栈深加 FPU 异常帧留余量；`taskManagerShowStats()` 打印各任务栈和堆的最低余量 |
+| `app/system/sysdebug.*` | 注册 `reboot`、`time`、`log`、`task`、`help` 控制台命令；`task` 打印各任务栈最小余量和堆最小余量；`reboot` 先用 `consoleDrain()` 等最后几行发完再复位，`log` 打印各日志链路的丢行数 |
 | `bsp/uart/uart.*` | USART0 PA9 TX / PA10 RX，115200、8N1；中断收发，2048 字节 RX 缓存；公开 API 仅供任务调用 |
 | `bsp/adc/adc.*` | 原始值统一写入 `gAdcRaw[eAdcChannel]`：三相电流 `ADC_CH_IU/IV/IW` = PC5/PB0/PB1 分别走 ADC2-IN15/ADC0-IN8/ADC1-IN9 注入组，由 TIMER0 CH3 同时触发；母线电压 `ADC_CH_VBUS`（PA5，IN5）和 NTC `ADC_CH_NTC`（PC3，IN13）走 ADC1 规则组连续扫描 + DMA1 循环搬运；在 `ADC_IRQHandler`（优先级 1，高于 RTOS 可屏蔽阈值，禁止调用 RTOS API）中调用 `adcCurrentCallbackSet()` 注册的电流环钩子 |
 | `bsp/pwm/pwm.*` | TIMER0 三相互补 PWM：上桥 PE9/PE11/PE13、下桥 PE8/PE10/PE12（AF1），20 kHz 中心对齐、283 ns 死区、高有效、空闲全低；CH3 在计数峰值触发电流采样；`pwmInit()` 后计数器运行但主输出关闭，`pwmOutputSet()` 开关六路门极，`pwmDutySet()` 写比较值（0～`PWM_PERIOD`）；调试暂停时 TIMER0 停止；PE15 由 `pwmPowerSet()` 控制风机 26 V 使能，上电默认关闭 |
@@ -16,11 +16,11 @@ ventblower 是从 ventcore 拆出的风机（blower）控制工程，保留 GD32
 | `bsp/bspdebug.*` | 注册 `bsp` 控制台调试命令；支持 ADC 原始值（三相电流/VBUS/NTC）、比例阀占空比、风机控制，以及 `bsp blower stats` 通信诊断 |
 | `bsp/dvalve/dvalve.*` | 以枚举选择氧气阀、泄压阀或呼气阀，提供统一的 20 kHz、0～100% PWM 占空比控制接口 |
 | `bsp/eeprom/m24512r.*` | 使用 PD10/PD11 软件 I2C 访问 M24512-R，提供跨页写入和任意字节读取 |
-| `module/rtos/rtos.*` | 项目层任务、调度、固定周期 `DelayUntil`、tick 和临界区接口 |
-| `module/rtos/portrtos.*` | FreeRTOS 原生接口绑定 |
+| `module/rtos/rtos.*` | 项目层任务、调度、固定周期 `DelayUntil`、tick、临界区接口，以及栈/堆最低余量查询 |
+| `module/rtos/portrtos.*` | FreeRTOS 原生接口绑定；栈溢出钩子把任务名记到 `gPortRtosOverflowTaskName` 后关中断停机，用调试器查看 |
 | `tools/controller/` | 轻量控制算法；当前提供带输出限幅和积分抗饱和的固定周期浮点 PID |
 | `tools/ringbuffer/` | 轻量级字节环形缓冲区（日志不再使用，当前未参与编译） |
-| `FreeRTOSConfig.h` | FreeRTOS 工程配置 |
+| `FreeRTOSConfig.h` | FreeRTOS 工程配置；堆 12 KB 只放任务栈和 TCB，关闭软件定时器（无 Tmr Svc 任务），栈溢出检查方式 2 |
 | `driver/aiic/` | 软件 I2C 驱动（当前未参与编译） |
 | `module/log/` | 日志与控制台：core（`log.*`、`console.*`）每行格式化一次后写给所有启用的链路，console 从一条链路读命令；port（`portlog.*`）绑定 RTT 并集中配置；见 `module/log/log.md` |
 | `develop/` | VS Code Device Tool 的 CMake 构建、烧录、复位与 RTT 工具，以及日志模块的主机端测试 `test_log.py`，见 `develop/README.md` |

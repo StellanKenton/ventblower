@@ -42,6 +42,8 @@ typedef struct stRepRtosOps {
     void (*enterCritical)(void);
     void (*exitCritical)(void);
     int8_t (*schedulerStart)(void);
+    uint32_t (*taskStackFreeMinGet)(repRtosTaskHandle handle);
+    uint32_t (*heapFreeMinGet)(void);
 } stRepRtosOps;
 
 int8_t repRtosTaskCreate(const stRepRtosTaskConfig *config);
@@ -59,6 +61,12 @@ uint32_t repRtosGetTickMs(void);
 void repRtosEnterCritical(void);
 void repRtosExitCritical(void);
 int8_t repRtosSchedulerStart(void);
+
+/** Minimum free stack a task has ever had, in words; NULL means the calling task. */
+uint32_t repRtosTaskStackFreeMinGet(repRtosTaskHandle handle);
+
+/** Minimum free heap since boot, in bytes. */
+uint32_t repRtosHeapFreeMinGet(void);
 
 #ifdef __cplusplus
 }

@@ -114,6 +114,26 @@ static int8_t taskManagerCreateTask(const stRepRtosTaskConfig *config)
     return lStatus;
 }
 
+void taskManagerShowStats(void)
+{
+    uint32_t lIndex;
+    const stRepRtosTaskConfig *lConfig;
+
+    for (lIndex = 0U; lIndex < (sizeof(gWorkerTaskConfigs) / sizeof(gWorkerTaskConfigs[0])); lIndex++) {
+        lConfig = &gWorkerTaskConfigs[lIndex];
+        if (*lConfig->handle == NULL) {
+            LOG_I(gTaskManagerTag, "%-12s not created", lConfig->name);
+            continue;
+        }
+        LOG_I(gTaskManagerTag,
+              "%-12s stack=%lu free_min=%lu words",
+              lConfig->name,
+              (unsigned long)lConfig->stackSize,
+              (unsigned long)repRtosTaskStackFreeMinGet(*lConfig->handle));
+    }
+    LOG_I(gTaskManagerTag, "heap free_min=%lu bytes", (unsigned long)repRtosHeapFreeMinGet());
+}
+
 bool WorkerTasksRegister(void)
 {
     uint32_t lIndex;

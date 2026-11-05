@@ -73,6 +73,8 @@ port_files:
 | `CONSOLE_INPUT_LINK` | `LOG_LINK_RTT` | |
 | `CONSOLE_ECHO_ENABLE` | 0 | 人工在串口终端上输入时设为 1 |
 
+RTT 缓冲在 `SEGGER/SEGGER_RTT_Conf.h` 中按工程配置，不随 core 同步：ventblower 上行 4096 B、下行 256 B、各 1 个通道；ventcore 需要上传完整通气瞬态数据，保留 32768 B 上行缓冲。
+
 Device Tool 构建时只传固定的几个 `-D`，所以工程之间的差异直接改 `portlog.h`。这些宏带 `#ifndef`，只是为了让主机端测试可以覆盖。
 
 ## 7. 改动落点矩阵

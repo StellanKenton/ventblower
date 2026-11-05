@@ -1,7 +1,7 @@
 /************************************************************************************
 * @file     : main.c
 * @brief    : Application entry point.
-* @details  : Starts the task manager and the RTOS scheduler.
+* @details  : Initializes log, console, BSP and worker tasks, then starts the RTOS scheduler.
 * @author   :
 * @date     :
 * @version  :
@@ -18,42 +18,38 @@
 #include "hall.h"
 #include "pwm.h"
 
+static const char *const gMainTag = "main";
+
 int main(void)
 {
-    int8_t lSchedulerStatus;
-
     logInit();
 #if LOG_CONSOLE_ENABLE
     if (sysdebugConsoleRegister() != CONSOLE_STATUS_OK) {
-        LOG_W("main", "sysdebug console registration failed");
+        LOG_W(gMainTag, "sysdebug console registration failed");
     }
     if (bspDebugConsoleRegister() != CONSOLE_STATUS_OK) {
-        LOG_W("main", "bspdebug console registration failed");
+        LOG_W(gMainTag, "bspdebug console registration failed");
     }
 #endif
 
     LOG_R("*****************************************");
     LOG_R("             system boot");
     LOG_R("*****************************************");
-    /* Bsp initialization */
+    /* Bsp initialization: ADC first, TIMER0 in pwmInit() starts current sampling. */
     adcInit();
     pwmInit();
     hallInit();
     dvalveInit();
 
-    /* Register project tasks before handing control to the scheduler. */
-    if (!WorkerTasksRegister()) {
-        LOG_E("main", "worker task registration failed");
+    /* Never start a partially wired system; the failure is logged by the task manager. */
+    if (WorkerTasksRegister()) {
+        /* Only returns on failure. */
+        int8_t lSchedulerStatus = repRtosSchedulerStart();
+        LOG_E(gMainTag, "scheduler start failed: %d", (int)lSchedulerStatus);
     }
 
-    lSchedulerStatus = repRtosSchedulerStart();
-    if (lSchedulerStatus != REP_RTOS_STATUS_OK) {
-        LOG_E("main", "scheduler start failed: %d", (int)lSchedulerStatus);
-    }
-
-    /* A running scheduler never returns to the application entry point. */
-    while(1) {
-        // do nothing, the scheduler is running
+    /* Fail-safe trap: PWM outputs stay disabled (POEN off). */
+    for (;;) {
     }
 }
 

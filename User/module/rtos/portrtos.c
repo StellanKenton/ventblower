@@ -15,6 +15,9 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+/* Name of the task that overflowed its stack; read it with the debugger after a hang. */
+static const char *volatile gPortRtosOverflowTaskName = NULL;
+
 static int8_t portRtosTaskCreate(const stRepRtosTaskConfig *config)
 {
     TaskHandle_t lTaskHandle = NULL;
@@ -112,6 +115,26 @@ static int8_t portRtosSchedulerStart(void)
     return REP_RTOS_STATUS_ERROR;
 }
 
+static uint32_t portRtosTaskStackFreeMinGet(repRtosTaskHandle handle)
+{
+    return (uint32_t)uxTaskGetStackHighWaterMark((TaskHandle_t)handle);
+}
+
+static uint32_t portRtosHeapFreeMinGet(void)
+{
+    return (uint32_t)xPortGetMinimumEverFreeHeapSize();
+}
+
+/* Called from PendSV when configCHECK_FOR_STACK_OVERFLOW detects an overflow; logging is not allowed here. */
+void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
+{
+    (void)xTask;
+    gPortRtosOverflowTaskName = pcTaskName;
+    taskDISABLE_INTERRUPTS();
+    for (;;) {
+    }
+}
+
 static const stRepRtosOps gRtosOps = {
     .taskCreate = portRtosTaskCreate,
     .taskDelete = portRtosTaskDelete,
@@ -121,6 +144,8 @@ static const stRepRtosOps gRtosOps = {
     .enterCritical = portRtosEnterCritical,
     .exitCritical = portRtosExitCritical,
     .schedulerStart = portRtosSchedulerStart,
+    .taskStackFreeMinGet = portRtosTaskStackFreeMinGet,
+    .heapFreeMinGet = portRtosHeapFreeMinGet,
 };
 
 const stRepRtosOps *portRtosGetOps(void)

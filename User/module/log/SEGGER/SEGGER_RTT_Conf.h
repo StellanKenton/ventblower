@@ -80,7 +80,7 @@ Revision: $Rev: 24316 $
 // Up-channel 1: SystemView
 //
 #ifndef   SEGGER_RTT_MAX_NUM_UP_BUFFERS
-  #define SEGGER_RTT_MAX_NUM_UP_BUFFERS             (3)     // Max. number of up-buffers (T->H) available on this target    (Default: 3)
+  #define SEGGER_RTT_MAX_NUM_UP_BUFFERS             (1)     // Only channel 0 (log + console) is used                         (Default: 3)
 #endif
 //
 // Most common case:
@@ -88,15 +88,15 @@ Revision: $Rev: 24316 $
 // Down-channel 1: SystemView
 //
 #ifndef   SEGGER_RTT_MAX_NUM_DOWN_BUFFERS
-  #define SEGGER_RTT_MAX_NUM_DOWN_BUFFERS           (3)     // Max. number of down-buffers (H->T) available on this target  (Default: 3)
+  #define SEGGER_RTT_MAX_NUM_DOWN_BUFFERS           (1)     // Only channel 0 (console input) is used                         (Default: 3)
 #endif
 
 #ifndef   BUFFER_SIZE_UP
-  #define BUFFER_SIZE_UP                            (32768) // Holds one complete ventilation transient upload
+  #define BUFFER_SIZE_UP                            (4096)  // Log output; well above consoleDrain backlog (~1 KB) + one LOG_R line (384 B)
 #endif
 
 #ifndef   BUFFER_SIZE_DOWN
-  #define BUFFER_SIZE_DOWN                          (512)   // Size of the console input buffer
+  #define BUFFER_SIZE_DOWN                          (256)   // Console input; matches CONSOLE_COMMAND_MAX_LENGTH
 #endif
 
 #ifndef   SEGGER_RTT_PRINTF_BUFFER_SIZE
@@ -144,7 +144,7 @@ Revision: $Rev: 24316 $
 // or define SEGGER_RTT_LOCK() to completely disable interrupts.
 //
 #ifndef   SEGGER_RTT_MAX_INTERRUPT_PRIORITY
-  #define SEGGER_RTT_MAX_INTERRUPT_PRIORITY         (0x20)   // Interrupt priority to lock on SEGGER_RTT_LOCK on Cortex-M3/4 (Default: 0x20)
+  #define SEGGER_RTT_MAX_INTERRUPT_PRIORITY         (0x50)   // Matches configMAX_SYSCALL_INTERRUPT_PRIORITY (5 << 4); IRQ priorities 0..4 are never masked by RTT
 #endif
 
 /*********************************************************************

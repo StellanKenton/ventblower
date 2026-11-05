@@ -106,4 +106,26 @@ int8_t repRtosSchedulerStart(void)
     return lOps->schedulerStart();
 }
 
+uint32_t repRtosTaskStackFreeMinGet(repRtosTaskHandle handle)
+{
+    const stRepRtosOps *lOps = repRtosGetOps();
+
+    if ((lOps == NULL) || (lOps->taskStackFreeMinGet == NULL)) {
+        return 0U;
+    }
+
+    return lOps->taskStackFreeMinGet(handle);
+}
+
+uint32_t repRtosHeapFreeMinGet(void)
+{
+    const stRepRtosOps *lOps = repRtosGetOps();
+
+    if ((lOps == NULL) || (lOps->heapFreeMinGet == NULL)) {
+        return 0U;
+    }
+
+    return lOps->heapFreeMinGet();
+}
+
 /**************************End of file********************************/

@@ -1,7 +1,7 @@
 /************************************************************************************
 * @file     : sysdebug.h
 * @brief    : System debug console commands.
-* @details  : Declares the reboot, time, log and help console commands.
+* @details  : Declares the reboot, time, log, task and help console commands.
 * @author   :
 * @date     :
 * @version  :
