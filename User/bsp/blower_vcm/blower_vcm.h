@@ -2,10 +2,10 @@
 * @file     : blower_vcm.h
 * @brief    : VCM blower UART communication BSP.
 * @details  : Declares protocol, reliable control TX, feedback, and diagnostics.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef USER_BSP_BLOWER_VCM_H
 #define USER_BSP_BLOWER_VCM_H

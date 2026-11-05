@@ -2,10 +2,10 @@
 * @file     : pid.c
 * @brief    : Lightweight PID controller implementation.
 * @details  : The controller includes output limiting and conditional anti-windup.
-* @author   :
+* @author   : Stellan
 * @date     : 2026-08-20
 * @version  : V1.0.0
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 **********************************************************************************/
 
 #include "pid.h"

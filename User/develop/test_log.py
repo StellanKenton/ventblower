@@ -1,3 +1,5 @@
+# Author   : Stellan
+# Copyright: Copyright (c) 2026 ResMed. All rights reserved.
 """Exercise the production log core and console with two fake links on the host."""
 import os
 from pathlib import Path

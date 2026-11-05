@@ -2,10 +2,10 @@
 * @file     : drvAiicPort.c
 * @brief    : Project binding for software I2C.
 * @details  : Maps AIIC bus lines to BSP GPIO pins.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "drvAiicPort.h"
 

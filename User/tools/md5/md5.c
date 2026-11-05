@@ -2,10 +2,10 @@
 * @file     : md5.c
 * @brief    : MD5 digest implementation.
 * @details  : Reusable MD5 incremental and one-shot helpers.
-* @author   : GitHub Copilot
+* @author   : Stellan
 * @date     : 2026-04-21
 * @version  : V1.0.0
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 **********************************************************************************/
 #include "md5.h"
 

@@ -2,10 +2,10 @@
 * @file     : m24512r.c
 * @brief    : M24512-R EEPROM driver.
 * @details  : Uses software I2C on PD10/PD11 with a 7-bit device address of 0x50.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "m24512r.h"
 

@@ -2,10 +2,10 @@
 * @file     : sysdebug.c
 * @brief    : System debug console command implementation.
 * @details  : Provides MCU reboot, run-time, log link statistics, task stack and help commands.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "sysdebug.h"
 

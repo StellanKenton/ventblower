@@ -2,10 +2,10 @@
 * @file     : aes.h
 * @brief    : AES block cipher public API.
 * @details  : Provides reusable AES-128/192/256 ECB and CBC helpers.
-* @author   : GitHub Copilot
+* @author   : Stellan
 * @date     : 2026-04-21
 * @version  : V1.0.0
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef AES_H
 #define AES_H

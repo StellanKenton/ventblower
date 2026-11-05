@@ -4,10 +4,10 @@
 * @details  : PD12/PD13/PD14 = Hall A/B/C = TIMER3 CH0/CH1/CH2. Hall mode XORs
 *             the three inputs; every edge captures the edge interval and
 *             restarts the counter. A counter overflow marks the rotor stalled.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef USER_BSP_HALL_H
 #define USER_BSP_HALL_H

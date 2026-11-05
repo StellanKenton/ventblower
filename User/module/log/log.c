@@ -2,10 +2,10 @@
 * @file     : log.c
 * @brief    : Lightweight logging core.
 * @details  : Formats each line once on the caller stack and writes it to every enabled link.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "log.h"
 

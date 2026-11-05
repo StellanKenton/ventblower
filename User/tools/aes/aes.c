@@ -2,10 +2,10 @@
 * @file     : aes.c
 * @brief    : AES block cipher implementation.
 * @details  : Reusable AES-128/192/256 ECB and CBC implementation.
-* @author   : GitHub Copilot
+* @author   : Stellan
 * @date     : 2026-04-21
 * @version  : V1.0.0
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 **********************************************************************************/
 #include "aes.h"
 

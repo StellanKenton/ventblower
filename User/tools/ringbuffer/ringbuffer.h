@@ -2,10 +2,10 @@
 * @file     : ringbuffer.h
 * @brief    : Byte-oriented SPSC ring buffer public API.
 * @details  : This module provides a reusable ring buffer core for MCU projects.
-* @author   : GitHub Copilot
+* @author   : Stellan
 * @date     : 2026-03-30
 * @version  : V1.0.0
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef RINGBUFFER_H
 #define RINGBUFFER_H

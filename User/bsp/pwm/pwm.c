@@ -3,10 +3,10 @@
 * @brief    : Three-phase complementary PWM and blower 26 V power stage enable.
 * @details  : TIMER0 center-aligned PWM, active-high gates, idle low; CH3 is the
 *             ADC inserted trigger. Counter halts with the core under debug.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "pwm.h"
 

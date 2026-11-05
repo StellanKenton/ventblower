@@ -2,10 +2,10 @@
 * @file     : ringbuffer.c
 * @brief    : Byte-oriented SPSC ring buffer implementation.
 * @details  : The core logic is portable and does not depend on an RTOS.
-* @author   : GitHub Copilot
+* @author   : Stellan
 * @date     : 2026-03-30
 * @version  : V1.0.0
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 **********************************************************************************/
 #include "ringbuffer.h"
 #include <string.h>

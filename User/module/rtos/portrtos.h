@@ -2,10 +2,10 @@
 * @file     : portrtos.h
 * @brief    : FreeRTOS provider for the project RTOS abstraction.
 * @details  : Exposes the FreeRTOS operations table.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef USER_MODULE_PORT_RTOS_H
 #define USER_MODULE_PORT_RTOS_H

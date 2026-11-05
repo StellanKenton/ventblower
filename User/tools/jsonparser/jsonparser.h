@@ -2,10 +2,10 @@
 * @file     : jsonparser.h
 * @brief    : Lightweight JSON field parser.
 * @details  : Provides allocation-free helpers for extracting simple JSON values.
-* @author   : GitHub Copilot
+* @author   : Stellan
 * @date     : 2026-04-25
 * @version  : V1.0.0
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef JSONPARSER_H
 #define JSONPARSER_H

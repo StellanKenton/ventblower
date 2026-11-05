@@ -2,10 +2,10 @@
 * @file     : console.h
 * @brief    : Console command interface.
 * @details  : Provides command binding types, line input processing and link draining.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef CONSOLE_H
 #define CONSOLE_H

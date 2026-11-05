@@ -2,10 +2,10 @@
 * @file     : pid.h
 * @brief    : Lightweight PID controller public API.
 * @details  : This module provides a fixed-period floating-point PID controller.
-* @author   :
+* @author   : Stellan
 * @date     : 2026-08-20
 * @version  : V1.0.0
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef PID_H
 #define PID_H

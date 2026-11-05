@@ -2,10 +2,10 @@
 * @file     : log.h
 * @brief    : Lightweight logging interface.
 * @details  : Provides LOG_E/LOG_W/LOG_I/LOG_D/LOG_R and the link contract implemented by portlog.c.
-* @author   : \.rumi
+* @author   : Stellan
 * @date     : 2026-11-04
 * @version  : V2.0.0
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef LOG_H
 #define LOG_H

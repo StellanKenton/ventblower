@@ -31,7 +31,6 @@ add_executable(ventblower
     User/bsp/bspdebug.c
     User/bsp/adc/adc.c
     User/bsp/blower_vcm/blower_vcm.c
-    User/bsp/dvalve/dvalve.c
     User/bsp/eeprom/m24512r.c
     User/bsp/hall/hall.c
     User/bsp/pwm/pwm.c
@@ -64,7 +63,6 @@ target_include_directories(ventblower PRIVATE
     User/bsp
     User/bsp/adc
     User/bsp/blower_vcm
-    User/bsp/dvalve
     User/bsp/eeprom
     User/bsp/hall
     User/bsp/pwm

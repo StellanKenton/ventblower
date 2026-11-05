@@ -2,10 +2,10 @@
 * @file     : rtos.h
 * @brief    : Project RTOS abstraction.
 * @details  : Exposes only the task and scheduler operations used by the project.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef USER_MODULE_RTOS_H
 #define USER_MODULE_RTOS_H

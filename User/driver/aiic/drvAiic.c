@@ -2,10 +2,10 @@
 * @file     : drvAiic.c
 * @brief    : Software I2C master driver.
 * @details  : Implements start/stop, byte transfer, ACK handling and bus locking.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "drvAiic.h"
 

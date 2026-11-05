@@ -2,10 +2,10 @@
 * @file     : taskmanager.h
 * @brief    : Project task manager.
 * @details  : Declares the entry used to create the project task manager.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef USER_APP_TASK_MANAGER_H
 #define USER_APP_TASK_MANAGER_H

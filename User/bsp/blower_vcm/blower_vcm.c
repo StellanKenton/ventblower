@@ -2,10 +2,10 @@
 * @file     : blower_vcm.c
 * @brief    : VCM blower UART communication BSP.
 * @details  : Implements circular DMA reception, stream parsing, and reliable control TX.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "blower_vcm.h"
 

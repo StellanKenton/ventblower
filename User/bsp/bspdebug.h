@@ -2,10 +2,10 @@
 * @file     : bspdebug.h
 * @brief    : BSP debug console commands.
 * @details  : Declares the BSP peripheral debug command registration entry.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef USER_BSP_BSPDEBUG_H
 #define USER_BSP_BSPDEBUG_H

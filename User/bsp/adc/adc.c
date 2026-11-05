@@ -3,10 +3,10 @@
 * @brief    : Board ADC acquisition driver.
 * @details  : ADC0/1/2 inserted groups sample U/V/W together on the TIMER0 CH3 trigger.
 *             ADC1 routine scan with DMA1 circular mode samples VBUS and NTC.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "adc.h"
 

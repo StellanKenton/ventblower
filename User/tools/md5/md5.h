@@ -2,10 +2,10 @@
 * @file     : md5.h
 * @brief    : MD5 digest public API.
 * @details  : Provides reusable MD5 incremental and one-shot helpers.
-* @author   : GitHub Copilot
+* @author   : Stellan
 * @date     : 2026-04-21
 * @version  : V1.0.0
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef MD5_H
 #define MD5_H

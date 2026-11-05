@@ -2,10 +2,10 @@
 * @file     : hall.c
 * @brief    : Three-phase Hall sensor interface on TIMER3.
 * @details  : ISR owns the period and stall state; readers only load 16-bit values.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "hall.h"
 

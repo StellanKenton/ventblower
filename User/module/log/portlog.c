@@ -2,10 +2,10 @@
 * @file     : portlog.c
 * @brief    : Logging port implementation.
 * @details  : Binds the log links, the time stamp source and the ISR check for this project.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "log.h"
 

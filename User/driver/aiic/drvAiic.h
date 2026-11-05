@@ -2,10 +2,10 @@
 * @file     : drvAiic.h
 * @brief    : Software I2C master driver.
 * @details  :
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef DRV_AIIC_H
 #define DRV_AIIC_H

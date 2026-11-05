@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Author   : Stellan
+# Copyright: Copyright (c) 2026 ResMed. All rights reserved.
 
 import argparse
 import json

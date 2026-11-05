@@ -2,10 +2,10 @@
 * @file     : m24512r.h
 * @brief    : M24512-R EEPROM driver.
 * @details  : Provides byte reads and page-aware writes over software I2C.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef USER_BSP_EEPROM_M24512R_H
 #define USER_BSP_EEPROM_M24512R_H

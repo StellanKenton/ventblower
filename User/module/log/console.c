@@ -2,10 +2,10 @@
 * @file     : console.c
 * @brief    : Console command processing.
 * @details  : Reads the console link input and dispatches complete command lines.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "console.h"
 

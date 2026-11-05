@@ -2,10 +2,10 @@
 * @file     : drvAiicPort.h
 * @brief    : Project binding for software I2C.
 * @details  :
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef DRV_AIIC_PORT_H
 #define DRV_AIIC_PORT_H

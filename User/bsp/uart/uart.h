@@ -2,10 +2,10 @@
 * @file     : uart.h
 * @brief    : MCM UART transport on USART0 PA9/PA10.
 * @details  : Task-owned TX, interrupt-owned RX producer; no RTOS calls in ISR.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef USER_BSP_UART_H
 #define USER_BSP_UART_H

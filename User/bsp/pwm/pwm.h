@@ -4,10 +4,10 @@
 * @details  : TIMER0 CH0/1/2 + CH0N/1N/2N on PE9/PE11/PE13 + PE8/PE10/PE12,
 *             center-aligned with dead time; CH3 triggers phase current sampling.
 *             PE15 switches the blower 26 V supply.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef USER_BSP_PWM_H
 #define USER_BSP_PWM_H

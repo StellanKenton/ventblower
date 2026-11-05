@@ -2,10 +2,10 @@
 * @file     : taskmanager.c
 * @brief    : Project task wiring.
 * @details  : Creates the default, sensor and system worker tasks.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "taskmanager.h"
 

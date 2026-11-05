@@ -2,10 +2,10 @@
 * @file     : main.c
 * @brief    : Application entry point.
 * @details  : Initializes log, console, BSP and worker tasks, then starts the RTOS scheduler.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "console.h"
 #include "log.h"
@@ -14,7 +14,6 @@
 #include "taskmanager.h"
 #include "adc.h"
 #include "bspdebug.h"
-#include "dvalve.h"
 #include "hall.h"
 #include "pwm.h"
 
@@ -39,7 +38,6 @@ int main(void)
     adcInit();
     pwmInit();
     hallInit();
-    dvalveInit();
 
     /* Never start a partially wired system; the failure is logged by the task manager. */
     if (WorkerTasksRegister()) {

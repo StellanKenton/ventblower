@@ -2,10 +2,10 @@
 * @file     : adc.h
 * @brief    : Board ADC acquisition interface.
 * @details  : Defines raw sample indexes, the current loop hook and the initialization entry point.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef USER_BSP_ADC_H
 #define USER_BSP_ADC_H

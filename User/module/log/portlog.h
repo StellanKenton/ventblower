@@ -2,10 +2,10 @@
 * @file     : portlog.h
 * @brief    : Logging port configuration.
 * @details  : Selects the compiled log level, line sizes, output links and the console link.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef PORT_LOG_H
 #define PORT_LOG_H

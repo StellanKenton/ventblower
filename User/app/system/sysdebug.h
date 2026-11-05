@@ -2,10 +2,10 @@
 * @file     : sysdebug.h
 * @brief    : System debug console commands.
 * @details  : Declares the reboot, time, log, task and help console commands.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef SYSDEBUG_H
 #define SYSDEBUG_H

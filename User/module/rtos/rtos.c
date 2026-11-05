@@ -2,10 +2,10 @@
 * @file     : rtos.c
 * @brief    : Project RTOS abstraction.
 * @details  : Forwards project RTOS calls to the selected platform port.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "rtos.h"
 

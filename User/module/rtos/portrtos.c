@@ -2,10 +2,10 @@
 * @file     : portrtos.c
 * @brief    : FreeRTOS provider for the project RTOS abstraction.
 * @details  : Maps project task operations to FreeRTOS.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "portrtos.h"
 

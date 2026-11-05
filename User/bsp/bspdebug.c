@@ -2,10 +2,10 @@
 * @file     : bspdebug.c
 * @brief    : BSP debug console command implementation.
 * @details  : Reads raw ADC samples, sets proportional valve duty and controls the blower.
-* @author   :
+* @author   : Stellan
 * @date     :
 * @version  :
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #include "bspdebug.h"
 
@@ -16,17 +16,10 @@
 #include "adc.h"
 #include "blower_vcm.h"
 #include "console.h"
-#include "dvalve.h"
 #include "log.h"
 #include "rtos.h"
 
 static const char *const gBspDebugTag = "bsp";
-
-static const char *const gBspDebugDvalveNames[DVALVE_COUNT] = {
-    "o2",
-    "relief",
-    "exp"
-};
 
 /**
  * @brief Skip spaces in a command argument string.
@@ -88,27 +81,6 @@ static bool bspDebugTokenEqual(const char *token, uint32_t length, const char *n
 }
 
 /**
- * @brief Find a name in a fixed string table.
- * @param token Token start address.
- * @param length Token length.
- * @param names String table.
- * @param count String table entry count.
- * @return Matching index, or -1 when not found.
- */
-static int32_t bspDebugNameFind(const char *token, uint32_t length, const char *const *names, uint32_t count)
-{
-    uint32_t lIndex;
-
-    for (lIndex = 0U; lIndex < count; lIndex++) {
-        if (bspDebugTokenEqual(token, length, names[lIndex])) {
-            return (int32_t)lIndex;
-        }
-    }
-
-    return -1;
-}
-
-/**
  * @brief Parse an unsigned decimal value with an inclusive upper bound.
  * @param token Token start address.
  * @param length Token length.
@@ -144,7 +116,6 @@ static bool bspDebugUint16Parse(const char *token, uint32_t length, uint16_t max
 static void bspDebugUsageShow(void)
 {
     LOG_I(gBspDebugTag, "adc: bsp a|adc");
-    LOG_I(gBspDebugTag, "dvalve: bsp d|dv|dvalve <o2|relief|exp> <0-100>");
     LOG_I(gBspDebugTag, "blower: bsp blower <speed 0-800|pwm 0-100|stats>");
 }
 
@@ -169,43 +140,6 @@ static int8_t bspDebugAdcCommand(const char *arguments)
           (unsigned int)gAdcRaw[ADC_CH_IW],
           (unsigned int)gAdcRaw[ADC_CH_VBUS],
           (unsigned int)gAdcRaw[ADC_CH_NTC]);
-    return CONSOLE_STATUS_OK;
-}
-
-/**
- * @brief Handle a proportional valve PWM duty request.
- * @param arguments Arguments following the dvalve subcommand.
- * @return Console command result.
- */
-static int8_t bspDebugDvalveCommand(const char *arguments)
-{
-    const char *lToken;
-    uint32_t lLength;
-    int32_t lIndex;
-    uint16_t lDuty;
-    int8_t lStatus;
-
-    if (!bspDebugTokenRead(&arguments, &lToken, &lLength)) {
-        bspDebugUsageShow();
-        return CONSOLE_STATUS_INVALID_ARGUMENT;
-    }
-    lIndex = bspDebugNameFind(lToken, lLength, gBspDebugDvalveNames, (uint32_t)DVALVE_COUNT);
-    if ((lIndex < 0) || !bspDebugTokenRead(&arguments, &lToken, &lLength)) {
-        bspDebugUsageShow();
-        return CONSOLE_STATUS_INVALID_ARGUMENT;
-    }
-    if (!bspDebugUint16Parse(lToken, lLength, DVALVE_DUTY_MAX_PERCENT, &lDuty) ||
-        bspDebugTokenRead(&arguments, &lToken, &lLength)) {
-        bspDebugUsageShow();
-        return CONSOLE_STATUS_INVALID_ARGUMENT;
-    }
-
-    lStatus = dvalveDutySet((eDvalveIndex)lIndex, (uint8_t)lDuty);
-    if (lStatus != DVALVE_STATUS_OK) {
-        LOG_E(gBspDebugTag, "dvalve %s set failed: %d", gBspDebugDvalveNames[lIndex], (int)lStatus);
-        return CONSOLE_STATUS_ERROR;
-    }
-    LOG_I(gBspDebugTag, "dvalve %s %u%%", gBspDebugDvalveNames[lIndex], (unsigned int)lDuty);
     return CONSOLE_STATUS_OK;
 }
 
@@ -302,10 +236,6 @@ static int8_t bspDebugConsoleCommand(const char *arguments)
     if (bspDebugTokenEqual(lToken, lLength, "a") || bspDebugTokenEqual(lToken, lLength, "adc")) {
         return bspDebugAdcCommand(arguments);
     }
-    if (bspDebugTokenEqual(lToken, lLength, "d") || bspDebugTokenEqual(lToken, lLength, "dv") ||
-        bspDebugTokenEqual(lToken, lLength, "dvalve")) {
-        return bspDebugDvalveCommand(arguments);
-    }
     if (bspDebugTokenEqual(lToken, lLength, "blower")) {
         return bspDebugBlowerCommand(arguments);
     }
@@ -316,7 +246,7 @@ static int8_t bspDebugConsoleCommand(const char *arguments)
 
 static const stConsoleCommand gBspDebugConsoleCommand = {
     "bsp",
-    "BSP debug: adc, dvalve, and blower control",
+    "BSP debug: adc and blower control",
     bspDebugConsoleCommand
 };
 

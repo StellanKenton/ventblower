@@ -2,10 +2,10 @@
 * @file     : butterworthfilter.h
 * @brief    : 
 * @details  : 
-* @author   : 
+* @author   : Stellan
 * @date     : 
 * @version  : 
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 ***********************************************************************************/
 #ifndef UNIT_ALGO_BUTTERWORTH_FILTER_H
 #define UNIT_ALGO_BUTTERWORTH_FILTER_H

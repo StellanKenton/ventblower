@@ -2,10 +2,10 @@
 * @file     : butterworthfilter.c
 * @brief    : 
 * @details  : 
-* @author   : 
+* @author   : Stellan
 * @date     : 
 * @version  : 
-* @copyright: Copyright (c) 2050
+* @copyright: Copyright (c) 2026 ResMed. All rights reserved.
 **********************************************************************************/
 /**
  * @file butterworthfilter.c
