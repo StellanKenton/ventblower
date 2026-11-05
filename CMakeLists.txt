@@ -26,6 +26,7 @@ set(FREERTOS_SOURCES
 
 add_executable(ventblower
     User/main.c
+    User/app/system/sysdebug.c
     User/app/system/taskmanager.c
     User/bsp/bspdebug.c
     User/bsp/adc/adc.c
@@ -34,17 +35,10 @@ add_executable(ventblower
     User/bsp/eeprom/m24512r.c
     User/bsp/hall/hall.c
     User/bsp/pwm/pwm.c
-    User/bsp/sf06sdk/sensirion_common.c
-    User/bsp/sf06sdk/sensirion_i2c.c
-    User/bsp/sf06sdk/sensirion_i2c_hal.c
-    User/bsp/sf06sdk/sfm_sf06_i2c.c
-    User/bsp/sf06sdk/sfm3119.c
     User/bsp/uart/uart.c
-    User/bsp/valve/valve.c
     User/module/log/console.c
-    User/module/log/consoleRegisted/sysdebug.c
     User/module/log/log.c
-    User/module/log/portLog.c
+    User/module/log/portlog.c
     User/module/log/SEGGER/SEGGER_RTT.c
     User/module/rtos/rtos.c
     User/module/rtos/portrtos.c
@@ -52,7 +46,6 @@ add_executable(ventblower
     User/tools/filter/butterworth/butterworthfilter.c
     User/tools/filter/iir1/iir1.c
     User/tools/filter/numfilter/numfilter.c
-    User/tools/ringbuffer/ringbuffer.c
     Firmware/CMSIS/GD/GD32F4xx/Source/system_gd32f4xx.c
     Firmware/CMSIS/GD/GD32F4xx/Source/GCC/startup_gd32f470zetx.s
     Firmware/GD32F4xx_standard_peripheral/Source/gd32f4xx_adc.c
@@ -75,18 +68,14 @@ target_include_directories(ventblower PRIVATE
     User/bsp/eeprom
     User/bsp/hall
     User/bsp/pwm
-    User/bsp/sf06sdk
     User/bsp/uart
-    User/bsp/valve
     User/module/log
-    User/module/log/consoleRegisted
     User/module/log/SEGGER
     User/module/rtos
     User/tools/controller
     User/tools/filter/butterworth
     User/tools/filter/iir1
     User/tools/filter/numfilter
-    User/tools/ringbuffer
     Firmware/CMSIS
     Firmware/CMSIS/GD/GD32F4xx/Include
     Firmware/GD32F4xx_standard_peripheral/Include

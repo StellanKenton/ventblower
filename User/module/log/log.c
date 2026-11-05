@@ -1,7 +1,7 @@
 /************************************************************************************
 * @file     : log.c
-* @brief    : RTT backed lightweight logging implementation.
-* @details  : Formats log records into a byte ring buffer and flushes them through RTT.
+* @brief    : Lightweight logging core.
+* @details  : Formats each line once on the caller stack and writes it to every enabled link.
 * @author   :
 * @date     :
 * @version  :
@@ -13,22 +13,14 @@
 #include <stddef.h>
 #include <stdio.h>
 
-#if LOG_CONSOLE_ENABLE
-#include "console.h"
-#endif
-#include "portLog.h"
-#if LOG_USE_RTOS
-#include "rtos.h"
-#endif
-#include "SEGGER_RTT.h"
+_Static_assert((LOG_LINE_MAX_SIZE >= 32U) && (LOG_RAW_LINE_MAX_SIZE >= 32U), "log line buffers are too small");
 
-static stRingBuffer gLogOutputQueue;
-static uint8_t gLogOutputQueueStorage[LOG_OUTPUT_QUEUE_SIZE];
-static char gLogFormatBuffer[LOG_OUTPUT_MAX_FRAME_SIZE];
-static uint8_t gLogFlushBuffer[LOG_OUTPUT_BUFFER_SIZE];
-static bool gLogReady = false;
+static const char *const gLogTag = "log";
+/* Diagnostic counters only: an occasional lost increment between tasks is acceptable. */
+static uint32_t gLogDropCount[LOG_LINK_COUNT];
+static uint32_t gLogIsrDropCount = 0U;
 
-static const char *logLevelToText(eLogLevel level)
+static const char *logLevelToText(uint8_t level)
 {
     switch (level) {
         case LOG_LEVEL_ERROR:
@@ -44,174 +36,99 @@ static const char *logLevelToText(eLogLevel level)
     }
 }
 
-static uint32_t logStringLength(const char *text, uint32_t maxLength)
+/** Clamp a printf-family return value to the range 0..maxLength. */
+static uint32_t logClampLength(int length, uint32_t maxLength)
 {
-    uint32_t lLength = 0U;
-
-    if (text == NULL) {
+    if (length < 0) {
         return 0U;
     }
 
-    while ((lLength < maxLength) && (text[lLength] != '\0')) {
-        lLength++;
-    }
-
-    return lLength;
+    return ((uint32_t)length < maxLength) ? (uint32_t)length : maxLength;
 }
 
-static uint32_t logFormatLine(eLogLevel level, const char *tag, const char *format, va_list args)
+/**
+ * Format one line into the caller buffer and write it to every enabled link.
+ * The buffer lives on the caller stack, so formatting needs no lock and each link keeps its own
+ * write atomic. A NULL tag selects a raw line without prefix.
+ */
+static void logOutput(char *line, uint32_t size, uint8_t level, const char *tag, const char *format, va_list args)
 {
-    int lPrefixLength;
-    int lBodyLength;
-    uint32_t lWriteLength;
-    uint32_t lMaxBodyLength;
-    const char *lTag = (tag != NULL) ? tag : "";
-    const char *lFormat = (format != NULL) ? format : "";
+    const uint32_t lMaxLength = size - 2U;
+    const stLogPortOps *lOps;
+    uint32_t lLength = 0U;
+    uint8_t lLinkId;
 
-    lPrefixLength = snprintf(gLogFormatBuffer,
-                             sizeof(gLogFormatBuffer),
-                             "[%s][%lu][%s] ",
-                             logLevelToText(level),
-                             (unsigned long)portLogGetRunTimeMs(),
-                             lTag);
-    if (lPrefixLength < 0) {
-        return 0U;
-    }
-    if ((uint32_t)lPrefixLength >= (uint32_t)sizeof(gLogFormatBuffer)) {
-        lPrefixLength = (int)sizeof(gLogFormatBuffer) - 1;
+    /* Links may use RTOS critical sections, so they must never run inside an ISR. */
+    if (logPortIsInIsr()) {
+        gLogIsrDropCount++;
+        return;
     }
 
-    lMaxBodyLength = (uint32_t)sizeof(gLogFormatBuffer) - (uint32_t)lPrefixLength;
-    if (lMaxBodyLength > 2U) {
-        lBodyLength = vsnprintf(&gLogFormatBuffer[lPrefixLength], lMaxBodyLength, lFormat, args);
-        if (lBodyLength < 0) {
-            return 0U;
+    if (tag != NULL) {
+        lLength = logClampLength(snprintf(line, lMaxLength + 1U, "[%s][%lu][%s] ", logLevelToText(level),
+                                          (unsigned long)logPortGetTimeMs(), tag), lMaxLength);
+    }
+    lLength += logClampLength(vsnprintf(&line[lLength], (lMaxLength + 1U) - lLength,
+                                        (format != NULL) ? format : "", args), lMaxLength - lLength);
+    line[lLength++] = '\r';
+    line[lLength++] = '\n';
+
+    for (lLinkId = 0U; lLinkId < LOG_LINK_COUNT; lLinkId++) {
+        lOps = logPortGetOps(lLinkId);
+        if ((lOps != NULL) && (lOps->write != NULL) &&
+            (lOps->write((const uint8_t *)line, lLength) != lLength)) {
+            gLogDropCount[lLinkId]++;
         }
     }
-
-    lWriteLength = logStringLength(gLogFormatBuffer, (uint32_t)sizeof(gLogFormatBuffer) - 2U);
-    gLogFormatBuffer[lWriteLength++] = '\r';
-    gLogFormatBuffer[lWriteLength++] = '\n';
-
-    return lWriteLength;
 }
 
-bool logInit(void)
+void logInit(void)
 {
-    if (gLogReady) {
-        return true;
+    const stLogPortOps *lOps;
+    uint8_t lLinkId;
+
+    for (lLinkId = 0U; lLinkId < LOG_LINK_COUNT; lLinkId++) {
+        lOps = logPortGetOps(lLinkId);
+        if ((lOps != NULL) && (lOps->init != NULL)) {
+            lOps->init();
+        }
     }
-
-    if (ringBufferInit(&gLogOutputQueue, gLogOutputQueueStorage, LOG_OUTPUT_QUEUE_SIZE) != RINGBUFFER_OK) {
-        return false;
-    }
-
-    SEGGER_RTT_Init();
-    (void)SEGGER_RTT_SetFlagsUpBuffer(0U, SEGGER_RTT_MODE_NO_BLOCK_TRIM);
-    (void)SEGGER_RTT_SetFlagsDownBuffer(0U, SEGGER_RTT_MODE_NO_BLOCK_TRIM);
-
-    gLogReady = true;
-    return true;
 }
 
-bool logProcess(uint16_t TickMs)
+void logWrite(uint8_t level, const char *tag, const char *format, ...)
 {
-    uint32_t lReadLength;
-
-    (void)TickMs;
-
-    if (!gLogReady) {
-        return logInit();
-    }
-
-    lReadLength = ringBufferRead(&gLogOutputQueue, gLogFlushBuffer, (uint32_t)sizeof(gLogFlushBuffer));
-    if (lReadLength != 0U) {
-        (void)SEGGER_RTT_Write(0U, gLogFlushBuffer, (unsigned)lReadLength);
-    }
-
-#if LOG_CONSOLE_ENABLE
-    (void)consoleProcess(TickMs);
-#endif
-
-    return true;
-}
-
-void logVWrite(eLogLevel level, const char *tag, const char *format, ...)
-{
-    uint32_t lWriteLength;
+    char lLine[LOG_LINE_MAX_SIZE];
     va_list lArgs;
 
-    if (!gLogReady) {
-        (void)logInit();
-    }
-
-#if LOG_USE_RTOS
-    repRtosEnterCritical();
-#endif
     va_start(lArgs, format);
-    lWriteLength = logFormatLine(level, tag, format, lArgs);
+    logOutput(lLine, (uint32_t)sizeof(lLine), level, (tag != NULL) ? tag : "", format, lArgs);
     va_end(lArgs);
-    if (lWriteLength != 0U) {
-        (void)SEGGER_RTT_Write(0U, gLogFormatBuffer, (unsigned)lWriteLength);
-    }
-#if LOG_USE_RTOS
-    repRtosExitCritical();
-#endif
-}
-
-void logWrite(eLogLevel level, const char *tag, const char *format, ...)
-{
-    uint32_t lWriteLength;
-    va_list lArgs;
-
-    if (!gLogReady) {
-        (void)logInit();
-    }
-
-#if LOG_USE_RTOS
-    repRtosEnterCritical();
-#endif
-    va_start(lArgs, format);
-    lWriteLength = logFormatLine(level, tag, format, lArgs);
-    va_end(lArgs);
-    if (lWriteLength != 0U) {
-        (void)ringBufferWriteOverwrite(&gLogOutputQueue, (const uint8_t *)gLogFormatBuffer, lWriteLength);
-    }
-#if LOG_USE_RTOS
-    repRtosExitCritical();
-#endif
 }
 
 void logRawWrite(const char *format, ...)
 {
-    int lWriteLength;
-    uint32_t lTextLength;
-    const uint32_t lMaxTextLength = (uint32_t)sizeof(gLogFormatBuffer) - 2U;
-    const char *lFormat = (format != NULL) ? format : "";
+    char lLine[LOG_RAW_LINE_MAX_SIZE];
     va_list lArgs;
 
-    if (!gLogReady) {
-        (void)logInit();
-    }
-
-#if LOG_USE_RTOS
-    repRtosEnterCritical();
-#endif
     va_start(lArgs, format);
-    lWriteLength = vsnprintf(gLogFormatBuffer, lMaxTextLength + 1U, lFormat, lArgs);
+    logOutput(lLine, (uint32_t)sizeof(lLine), LOG_LEVEL_NONE, NULL, format, lArgs);
     va_end(lArgs);
-    if (lWriteLength >= 0) {
-        lTextLength = (uint32_t)lWriteLength;
-        if (lTextLength > lMaxTextLength) {
-            lTextLength = lMaxTextLength;
+}
+
+void logShowStats(void)
+{
+    const stLogPortOps *lOps;
+    uint8_t lLinkId;
+
+    /* Requested output, so it bypasses the compile-time level filter. */
+    for (lLinkId = 0U; lLinkId < LOG_LINK_COUNT; lLinkId++) {
+        lOps = logPortGetOps(lLinkId);
+        if (lOps != NULL) {
+            logWrite(LOG_LEVEL_INFO, gLogTag, "link %s dropped %lu", (lOps->name != NULL) ? lOps->name : "?",
+                     (unsigned long)gLogDropCount[lLinkId]);
         }
-        gLogFormatBuffer[lTextLength++] = '\r';
-        gLogFormatBuffer[lTextLength++] = '\n';
-        (void)SEGGER_RTT_Write(0U, gLogFormatBuffer, (unsigned)lTextLength);
     }
-#if LOG_USE_RTOS
-    repRtosExitCritical();
-#endif
+    logWrite(LOG_LEVEL_INFO, gLogTag, "isr dropped %lu", (unsigned long)gLogIsrDropCount);
 }
 
 /**************************End of file********************************/

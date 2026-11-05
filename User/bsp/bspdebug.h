@@ -10,7 +10,7 @@
 #ifndef USER_BSP_BSPDEBUG_H
 #define USER_BSP_BSPDEBUG_H
 
-#include <stdbool.h>
+#include <stdint.h>
 
 #define BSP_DEBUG_BLOWER_SPEED_MAX_RPS        800U
 #define BSP_DEBUG_BLOWER_PWM_MAX_PERCENT     100U
@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-bool bspDebugConsoleRegister(void);
+int8_t bspDebugConsoleRegister(void);
 
 #ifdef __cplusplus
 }

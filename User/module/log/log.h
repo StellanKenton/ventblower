@@ -1,73 +1,92 @@
 /************************************************************************************
 * @file     : log.h
 * @brief    : Lightweight logging interface.
-* @details  : Provides unified LOG_I/LOG_E/LOG_W/LOG_D macros and raw RTT output.
+* @details  : Provides LOG_E/LOG_W/LOG_I/LOG_D/LOG_R and the link contract implemented by portlog.c.
 * @author   : \.rumi
-* @date     : 2026-03-31
-* @version  : V1.0.0
+* @date     : 2026-11-04
+* @version  : V2.0.0
 * @copyright: Copyright (c) 2050
 ***********************************************************************************/
 #ifndef LOG_H
 #define LOG_H
 
-#include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "ringbuffer.h"
+#include "portlog.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef enum eLogLevel {
-    LOG_LEVEL_NONE = 0,
-    LOG_LEVEL_ERROR = 1,
-    LOG_LEVEL_WARN = 2,
-    LOG_LEVEL_INFO = 3,
-    LOG_LEVEL_DEBUG = 4,
-} eLogLevel;
+/* Levels are macros so that LOG_COMPILED_LEVEL can be compared in #if. */
+#define LOG_LEVEL_NONE      0U
+#define LOG_LEVEL_ERROR     1U
+#define LOG_LEVEL_WARN      2U
+#define LOG_LEVEL_INFO      3U
+#define LOG_LEVEL_DEBUG     4U
 
-#include "portLog.h"
+typedef void (*pfLogPortInit)(void);
+typedef uint32_t (*pfLogPortWrite)(const uint8_t *data, uint32_t length);
+typedef uint32_t (*pfLogPortRead)(uint8_t *data, uint32_t length);
+typedef uint32_t (*pfLogPortPending)(void);
 
-#ifndef LOG_OUTPUT_MAX_FRAME_SIZE
-#define LOG_OUTPUT_MAX_FRAME_SIZE LOG_OUTPUT_BUFFER_SIZE
-#endif
+/*
+ * One output/input link, see log.md for the full contract.
+ * write is mandatory: it never blocks and takes a whole line (returns length) or nothing (returns 0).
+ * init, read and pending are optional. Links are only called from tasks or before the scheduler
+ * starts, because the core drops calls made from an ISR.
+ */
+typedef struct stLogPortOps {
+    const char *name;
+    pfLogPortInit init;
+    pfLogPortWrite write;
+    pfLogPortRead read;
+    pfLogPortPending pending;
+} stLogPortOps;
 
-void logWrite(eLogLevel level, const char *tag, const char *format, ...) __attribute__((format(printf, 3, 4)));
-void logVWrite(eLogLevel level, const char *tag, const char *format, ...) __attribute__((format(printf, 3, 4)));
+/* Port hooks implemented by portlog.c. */
+const stLogPortOps *logPortGetOps(uint8_t linkId);
+uint32_t logPortGetTimeMs(void);
+bool logPortIsInIsr(void);
+
+/** Initialize every enabled link; call once at the start of main(). */
+void logInit(void);
+
+/** Write one "[L][ms][tag] text" line to every enabled link. Task or pre-scheduler context. */
+void logWrite(uint8_t level, const char *tag, const char *format, ...) __attribute__((format(printf, 3, 4)));
+
+/** Write one line without prefix or level filtering, e.g. test data records. */
 void logRawWrite(const char *format, ...) __attribute__((format(printf, 1, 2)));
 
-#define LOG_T(tag, format, ...) logVWrite((eLogLevel)LOG_LEVEL_INFO, tag, format, ##__VA_ARGS__)
+/** Print the dropped line count of every enabled link and the dropped ISR calls. */
+void logShowStats(void);
+
 #define LOG_R(format, ...) logRawWrite(format, ##__VA_ARGS__)
 
 #if LOG_COMPILED_LEVEL >= LOG_LEVEL_ERROR
-#define LOG_E(tag, format, ...) logWrite((eLogLevel)LOG_LEVEL_ERROR, tag, format, ##__VA_ARGS__)
+#define LOG_E(tag, format, ...) logWrite(LOG_LEVEL_ERROR, tag, format, ##__VA_ARGS__)
 #else
 #define LOG_E(tag, format, ...) ((void)0)
 #endif
 
 #if LOG_COMPILED_LEVEL >= LOG_LEVEL_WARN
-#define LOG_W(tag, format, ...) logWrite((eLogLevel)LOG_LEVEL_WARN, tag, format, ##__VA_ARGS__)
+#define LOG_W(tag, format, ...) logWrite(LOG_LEVEL_WARN, tag, format, ##__VA_ARGS__)
 #else
 #define LOG_W(tag, format, ...) ((void)0)
 #endif
 
 #if LOG_COMPILED_LEVEL >= LOG_LEVEL_INFO
-#define LOG_I(tag, format, ...) logWrite((eLogLevel)LOG_LEVEL_INFO, tag, format, ##__VA_ARGS__)
+#define LOG_I(tag, format, ...) logWrite(LOG_LEVEL_INFO, tag, format, ##__VA_ARGS__)
 #else
 #define LOG_I(tag, format, ...) ((void)0)
 #endif
 
 #if LOG_COMPILED_LEVEL >= LOG_LEVEL_DEBUG
-#define LOG_D(tag, format, ...) logWrite((eLogLevel)LOG_LEVEL_DEBUG, tag, format, ##__VA_ARGS__)
+#define LOG_D(tag, format, ...) logWrite(LOG_LEVEL_DEBUG, tag, format, ##__VA_ARGS__)
 #else
 #define LOG_D(tag, format, ...) ((void)0)
 #endif
-
-
-bool logInit(void);
-bool logProcess(uint16_t TickMs);
 
 #ifdef __cplusplus
 }

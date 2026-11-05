@@ -1,7 +1,7 @@
 /************************************************************************************
 * @file     : sysdebug.c
 * @brief    : System debug console command implementation.
-* @details  : Provides MCU reboot and run-time query commands.
+* @details  : Provides MCU reboot, run-time, log link statistics and help commands.
 * @author   :
 * @date     :
 * @version  :
@@ -12,56 +12,65 @@
 #include "console.h"
 #include "gd32f4xx.h"
 #include "log.h"
-#include "portLog.h"
+#include "rtos.h"
 
 static const char *const gSysdebugTag = "sysdebug";
 
-static eConsoleCommandResult sysdebugConsoleReboot(const char *arguments)
+static int8_t sysdebugConsoleReboot(const char *arguments)
 {
-    uint32_t lDelayTick = 100000U;
     (void)arguments;
-    LOG_T(gSysdebugTag, "Received command rebooting mcu");
+    LOG_I(gSysdebugTag, "Received command rebooting mcu");
     LOG_R(" ");
     LOG_R(" ");
-    while (lDelayTick > 0U) {
-        lDelayTick--;
-    }
+    /* The reset re-initializes the link buffers, so let the host read the last lines first. */
+    (void)consoleDrain(0U, SYSDEBUG_REBOOT_DRAIN_TIMEOUT_MS);
     NVIC_SystemReset();
-    return CONSOLE_COMMAND_RESULT_OK;
+    return CONSOLE_STATUS_OK;
 }
 
-static eConsoleCommandResult sysdebugConsoleTime(const char *arguments)
+static int8_t sysdebugConsoleTime(const char *arguments)
 {
     (void)arguments;
-    LOG_I(gSysdebugTag, "runtime %lu ms", (unsigned long)portLogGetRunTimeMs());
+    LOG_I(gSysdebugTag, "runtime %lu ms", (unsigned long)repRtosGetTickMs());
 
-    return CONSOLE_COMMAND_RESULT_OK;
+    return CONSOLE_STATUS_OK;
 }
 
-static eConsoleCommandResult sysdebugConsoleHelp(const char *arguments)
+static int8_t sysdebugConsoleLog(const char *arguments)
+{
+    (void)arguments;
+    logShowStats();
+
+    return CONSOLE_STATUS_OK;
+}
+
+static int8_t sysdebugConsoleHelp(const char *arguments)
 {
     (void)arguments;
     consoleShowHelp();
 
-    return CONSOLE_COMMAND_RESULT_OK;
+    return CONSOLE_STATUS_OK;
 }
 
 static const stConsoleCommand gSysdebugConsoleCommands[] = {
     {"reboot", "Restart the MCU", sysdebugConsoleReboot},
     {"time", "Show system runtime in milliseconds", sysdebugConsoleTime},
+    {"log", "Show dropped lines per log link", sysdebugConsoleLog},
     {"help", "Show all registered commands", sysdebugConsoleHelp},
 };
 
-bool sysdebugConsoleRegister(void)
+int8_t sysdebugConsoleRegister(void)
 {
     uint32_t lIndex;
+    int8_t lStatus;
 
     for (lIndex = 0U; lIndex < (sizeof(gSysdebugConsoleCommands) / sizeof(gSysdebugConsoleCommands[0])); lIndex++) {
-        if (!consoleRegisterCommand(&gSysdebugConsoleCommands[lIndex])) {
-            return false;
+        lStatus = consoleRegisterCommand(&gSysdebugConsoleCommands[lIndex]);
+        if (lStatus != CONSOLE_STATUS_OK) {
+            return lStatus;
         }
     }
 
-    return true;
+    return CONSOLE_STATUS_OK;
 }
 /**************************End of file********************************/

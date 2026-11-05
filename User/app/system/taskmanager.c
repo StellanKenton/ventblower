@@ -12,9 +12,9 @@
 #include <stddef.h>
 
 #include "blower_vcm.h"
+#include "console.h"
 #include "log.h"
 #include "rtos.h"
-#include "sfm3119.h"
 
 static const char *const gTaskManagerTag = "taskManager";
 static bool gWorkerTasksCreated = false;
@@ -61,18 +61,19 @@ static void defaultTask(void *argument)
     (void)argument;
 
     for (;;) {
-        (void)logProcess((uint16_t)DEFAULT_TASK_INTERVAL_MS);
+#if LOG_CONSOLE_ENABLE
+        consoleProcess();
+#endif
         (void)repRtosTaskDelayUntilMs(&lPreviousWakeMs, DEFAULT_TASK_INTERVAL_MS);
     }
 }
 
-/** Sample flow sensors and service the blower link (feedback parse and control keepalive). */
+/** Service the blower link (feedback parse and control keepalive). */
 static void sensorTask(void *argument)
 {
     uint32_t lPreviousWakeMs;
 
     (void)argument;
-    (void)sfm3119Init();
     if (blowerVcmInit() != BLOWER_VCM_STATUS_OK) {
         LOG_E(gTaskManagerTag, "blower VCM init failed");
     } else {
@@ -82,7 +83,6 @@ static void sensorTask(void *argument)
 
     for (;;) {
         (void)blowerVcmProcess(repRtosGetTickMs());
-        (void)sfm3119Process();
         (void)repRtosTaskDelayUntilMs(&lPreviousWakeMs, SENSOR_TASK_INTERVAL_MS);
     }
 }
@@ -103,7 +103,7 @@ static int8_t taskManagerCreateTask(const stRepRtosTaskConfig *config)
     int8_t lStatus = repRtosTaskCreate(config);
 
     if (lStatus != REP_RTOS_STATUS_OK) {
-        LOG_T(gTaskManagerTag,
+        LOG_E(gTaskManagerTag,
               "task create failed name=%s priority=%lu stack=%lu status=%d",
               config->name,
               (unsigned long)config->priority,
@@ -130,7 +130,7 @@ bool WorkerTasksRegister(void)
     }
 
     if (!lAllCreated) {
-        LOG_T(gTaskManagerTag, "worker task registration failed");
+        LOG_E(gTaskManagerTag, "worker task registration failed");
         return false;
     }
 

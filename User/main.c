@@ -7,6 +7,7 @@
 * @version  :
 * @copyright: Copyright (c) 2050
 ***********************************************************************************/
+#include "console.h"
 #include "log.h"
 #include "rtos.h"
 #include "sysdebug.h"
@@ -16,7 +17,6 @@
 #include "dvalve.h"
 #include "hall.h"
 #include "pwm.h"
-#include "valve.h"
 
 int main(void)
 {
@@ -24,10 +24,10 @@ int main(void)
 
     logInit();
 #if LOG_CONSOLE_ENABLE
-    if (!sysdebugConsoleRegister()) {
+    if (sysdebugConsoleRegister() != CONSOLE_STATUS_OK) {
         LOG_W("main", "sysdebug console registration failed");
     }
-    if (!bspDebugConsoleRegister()) {
+    if (bspDebugConsoleRegister() != CONSOLE_STATUS_OK) {
         LOG_W("main", "bspdebug console registration failed");
     }
 #endif
@@ -40,16 +40,15 @@ int main(void)
     pwmInit();
     hallInit();
     dvalveInit();
-    valveInit();
 
     /* Register project tasks before handing control to the scheduler. */
     if (!WorkerTasksRegister()) {
-        LOG_T("main", "worker task registration failed");
+        LOG_E("main", "worker task registration failed");
     }
 
     lSchedulerStatus = repRtosSchedulerStart();
     if (lSchedulerStatus != REP_RTOS_STATUS_OK) {
-        LOG_T("main", "scheduler start failed: %d", (int)lSchedulerStatus);
+        LOG_E("main", "scheduler start failed: %d", (int)lSchedulerStatus);
     }
 
     /* A running scheduler never returns to the application entry point. */

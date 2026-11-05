@@ -1,7 +1,7 @@
 /************************************************************************************
 * @file     : bspdebug.c
 * @brief    : BSP debug console command implementation.
-* @details  : Reads raw ADC samples and gets or sets digital valve states.
+* @details  : Reads raw ADC samples, sets proportional valve duty and controls the blower.
 * @author   :
 * @date     :
 * @version  :
@@ -9,6 +9,7 @@
 ***********************************************************************************/
 #include "bspdebug.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -18,16 +19,8 @@
 #include "dvalve.h"
 #include "log.h"
 #include "rtos.h"
-#include "valve.h"
 
 static const char *const gBspDebugTag = "bsp";
-
-static const char *const gBspDebugValveNames[VALVE_COUNT] = {
-    "insp",
-    "exp",
-    "diff",
-    "flush"
-};
 
 static const char *const gBspDebugDvalveNames[DVALVE_COUNT] = {
     "o2",
@@ -151,7 +144,6 @@ static bool bspDebugUint16Parse(const char *token, uint32_t length, uint16_t max
 static void bspDebugUsageShow(void)
 {
     LOG_I(gBspDebugTag, "adc: bsp a|adc");
-    LOG_I(gBspDebugTag, "valve: bsp v|valve <insp|exp|diff|flush> [0|1]");
     LOG_I(gBspDebugTag, "dvalve: bsp d|dv|dvalve <o2|relief|exp> <0-100>");
     LOG_I(gBspDebugTag, "blower: bsp blower <speed 0-800|pwm 0-100|stats>");
 }
@@ -161,14 +153,14 @@ static void bspDebugUsageShow(void)
  * @param arguments Arguments following the ADC subcommand.
  * @return Console command result.
  */
-static eConsoleCommandResult bspDebugAdcCommand(const char *arguments)
+static int8_t bspDebugAdcCommand(const char *arguments)
 {
     const char *lToken;
     uint32_t lLength;
 
     if (bspDebugTokenRead(&arguments, &lToken, &lLength)) {
         bspDebugUsageShow();
-        return CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT;
+        return CONSOLE_STATUS_INVALID_ARGUMENT;
     }
 
     LOG_I(gBspDebugTag, "adc iu %u iv %u iw %u vbus %u ntc %u",
@@ -177,56 +169,7 @@ static eConsoleCommandResult bspDebugAdcCommand(const char *arguments)
           (unsigned int)gAdcRaw[ADC_CH_IW],
           (unsigned int)gAdcRaw[ADC_CH_VBUS],
           (unsigned int)gAdcRaw[ADC_CH_NTC]);
-    return CONSOLE_COMMAND_RESULT_OK;
-}
-
-/**
- * @brief Handle a digital valve state query or control request.
- * @param arguments Arguments following the valve subcommand.
- * @return Console command result.
- */
-static eConsoleCommandResult bspDebugValveCommand(const char *arguments)
-{
-    const char *lToken;
-    uint32_t lLength;
-    int32_t lIndex;
-    eValveLevel lLevel;
-    int8_t lStatus;
-
-    if (!bspDebugTokenRead(&arguments, &lToken, &lLength)) {
-        bspDebugUsageShow();
-        return CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT;
-    }
-    lIndex = bspDebugNameFind(lToken, lLength, gBspDebugValveNames, (uint32_t)VALVE_COUNT);
-    if (lIndex < 0) {
-        bspDebugUsageShow();
-        return CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT;
-    }
-
-    if (!bspDebugTokenRead(&arguments, &lToken, &lLength)) {
-        lLevel = valveStateGet((eValveIndex)lIndex);
-        if (lLevel == VALVE_LEVEL_INVALID) {
-            LOG_E(gBspDebugTag, "valve %s read failed", gBspDebugValveNames[lIndex]);
-            return CONSOLE_COMMAND_RESULT_ERROR;
-        }
-        LOG_I(gBspDebugTag, "valve %s %u", gBspDebugValveNames[lIndex], (unsigned int)lLevel);
-        return CONSOLE_COMMAND_RESULT_OK;
-    }
-
-    if ((lLength != 1U) || ((lToken[0] != '0') && (lToken[0] != '1')) ||
-        bspDebugTokenRead(&arguments, &lToken, &lLength)) {
-        bspDebugUsageShow();
-        return CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT;
-    }
-
-    lLevel = (lToken[0] == '1') ? VALVE_LEVEL_HIGH : VALVE_LEVEL_LOW;
-    lStatus = valveControlSet((eValveIndex)lIndex, lLevel);
-    if (lStatus != VALVE_STATUS_OK) {
-        LOG_E(gBspDebugTag, "valve %s set failed: %d", gBspDebugValveNames[lIndex], (int)lStatus);
-        return CONSOLE_COMMAND_RESULT_ERROR;
-    }
-    LOG_I(gBspDebugTag, "valve %s set %u", gBspDebugValveNames[lIndex], (unsigned int)lLevel);
-    return CONSOLE_COMMAND_RESULT_OK;
+    return CONSOLE_STATUS_OK;
 }
 
 /**
@@ -234,7 +177,7 @@ static eConsoleCommandResult bspDebugValveCommand(const char *arguments)
  * @param arguments Arguments following the dvalve subcommand.
  * @return Console command result.
  */
-static eConsoleCommandResult bspDebugDvalveCommand(const char *arguments)
+static int8_t bspDebugDvalveCommand(const char *arguments)
 {
     const char *lToken;
     uint32_t lLength;
@@ -244,26 +187,26 @@ static eConsoleCommandResult bspDebugDvalveCommand(const char *arguments)
 
     if (!bspDebugTokenRead(&arguments, &lToken, &lLength)) {
         bspDebugUsageShow();
-        return CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT;
+        return CONSOLE_STATUS_INVALID_ARGUMENT;
     }
     lIndex = bspDebugNameFind(lToken, lLength, gBspDebugDvalveNames, (uint32_t)DVALVE_COUNT);
     if ((lIndex < 0) || !bspDebugTokenRead(&arguments, &lToken, &lLength)) {
         bspDebugUsageShow();
-        return CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT;
+        return CONSOLE_STATUS_INVALID_ARGUMENT;
     }
     if (!bspDebugUint16Parse(lToken, lLength, DVALVE_DUTY_MAX_PERCENT, &lDuty) ||
         bspDebugTokenRead(&arguments, &lToken, &lLength)) {
         bspDebugUsageShow();
-        return CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT;
+        return CONSOLE_STATUS_INVALID_ARGUMENT;
     }
 
     lStatus = dvalveDutySet((eDvalveIndex)lIndex, (uint8_t)lDuty);
     if (lStatus != DVALVE_STATUS_OK) {
         LOG_E(gBspDebugTag, "dvalve %s set failed: %d", gBspDebugDvalveNames[lIndex], (int)lStatus);
-        return CONSOLE_COMMAND_RESULT_ERROR;
+        return CONSOLE_STATUS_ERROR;
     }
     LOG_I(gBspDebugTag, "dvalve %s %u%%", gBspDebugDvalveNames[lIndex], (unsigned int)lDuty);
-    return CONSOLE_COMMAND_RESULT_OK;
+    return CONSOLE_STATUS_OK;
 }
 
 /**
@@ -271,7 +214,7 @@ static eConsoleCommandResult bspDebugDvalveCommand(const char *arguments)
  * @param arguments Arguments following the blower subcommand.
  * @return Console command result.
  */
-static eConsoleCommandResult bspDebugBlowerCommand(const char *arguments)
+static int8_t bspDebugBlowerCommand(const char *arguments)
 {
     const char *lModeToken;
     const char *lValueToken;
@@ -285,7 +228,7 @@ static eConsoleCommandResult bspDebugBlowerCommand(const char *arguments)
 
     if (!bspDebugTokenRead(&arguments, &lModeToken, &lModeLength)) {
         bspDebugUsageShow();
-        return CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT;
+        return CONSOLE_STATUS_INVALID_ARGUMENT;
     }
 
     if (bspDebugTokenEqual(lModeToken, lModeLength, "stats") &&
@@ -311,12 +254,12 @@ static eConsoleCommandResult bspDebugBlowerCommand(const char *arguments)
               (unsigned long)lStats.uartErrorCount,
               (unsigned long)lStats.dmaErrorCount,
               (unsigned long)lStats.txBusyDropCount);
-        return CONSOLE_COMMAND_RESULT_OK;
+        return CONSOLE_STATUS_OK;
     }
     if (!bspDebugTokenRead(&arguments, &lValueToken, &lValueLength) ||
         bspDebugTokenRead(&arguments, &lValueToken, &lValueLength)) {
         bspDebugUsageShow();
-        return CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT;
+        return CONSOLE_STATUS_INVALID_ARGUMENT;
     }
 
     if (bspDebugTokenEqual(lModeToken, lModeLength, "speed") &&
@@ -329,17 +272,17 @@ static eConsoleCommandResult bspDebugBlowerCommand(const char *arguments)
         lTarget = (uint16_t)(lValue * BSP_DEBUG_BLOWER_PWM_SCALE);
     } else {
         bspDebugUsageShow();
-        return CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT;
+        return CONSOLE_STATUS_INVALID_ARGUMENT;
     }
 
     /* SensorTask keeps the last control frame alive through blowerVcmProcess(). */
     if (blowerVcmSendControl(lMode, (uint16_t)(lTarget * 10U), 0U) != BLOWER_VCM_STATUS_OK) {
         LOG_E(gBspDebugTag, "blower control send failed");
-        return CONSOLE_COMMAND_RESULT_ERROR;
+        return CONSOLE_STATUS_ERROR;
     }
     LOG_I(gBspDebugTag, "blower %s %u", (lMode == BLOWER_CTRL_SPEED) ? "speed" : "pwm",
           (unsigned int)lValue);
-    return CONSOLE_COMMAND_RESULT_OK;
+    return CONSOLE_STATUS_OK;
 }
 
 /**
@@ -347,20 +290,17 @@ static eConsoleCommandResult bspDebugBlowerCommand(const char *arguments)
  * @param arguments Arguments following the bsp command.
  * @return Console command result.
  */
-static eConsoleCommandResult bspDebugConsoleCommand(const char *arguments)
+static int8_t bspDebugConsoleCommand(const char *arguments)
 {
     const char *lToken;
     uint32_t lLength;
 
     if (!bspDebugTokenRead(&arguments, &lToken, &lLength)) {
         bspDebugUsageShow();
-        return CONSOLE_COMMAND_RESULT_OK;
+        return CONSOLE_STATUS_OK;
     }
     if (bspDebugTokenEqual(lToken, lLength, "a") || bspDebugTokenEqual(lToken, lLength, "adc")) {
         return bspDebugAdcCommand(arguments);
-    }
-    if (bspDebugTokenEqual(lToken, lLength, "v") || bspDebugTokenEqual(lToken, lLength, "valve")) {
-        return bspDebugValveCommand(arguments);
     }
     if (bspDebugTokenEqual(lToken, lLength, "d") || bspDebugTokenEqual(lToken, lLength, "dv") ||
         bspDebugTokenEqual(lToken, lLength, "dvalve")) {
@@ -371,20 +311,20 @@ static eConsoleCommandResult bspDebugConsoleCommand(const char *arguments)
     }
 
     bspDebugUsageShow();
-    return CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT;
+    return CONSOLE_STATUS_INVALID_ARGUMENT;
 }
 
 static const stConsoleCommand gBspDebugConsoleCommand = {
     "bsp",
-    "BSP debug: adc, valves, and blower control",
+    "BSP debug: adc, dvalve, and blower control",
     bspDebugConsoleCommand
 };
 
 /**
- * @brief Register the BSP debug command with the RTT console.
- * @return true when registration succeeds.
+ * @brief Register the BSP debug command with the console.
+ * @return CONSOLE_STATUS_OK, or the console error status.
  */
-bool bspDebugConsoleRegister(void)
+int8_t bspDebugConsoleRegister(void)
 {
     return consoleRegisterCommand(&gBspDebugConsoleCommand);
 }

@@ -1,63 +1,76 @@
 /************************************************************************************
-* @file     : portLog.c
+* @file     : portlog.c
 * @brief    : Logging port implementation.
-* @details  : Selects the MCU run-time provider according to the log configuration.
+* @details  : Binds the log links, the time stamp source and the ISR check for this project.
 * @author   :
 * @date     :
 * @version  :
 * @copyright: Copyright (c) 2050
 ***********************************************************************************/
-#include "portLog.h"
+#include "log.h"
 
 #include <stddef.h>
 
-#if LOG_USE_RTOS
+#include "gd32f4xx.h"
 #include "rtos.h"
-#endif
+#include "SEGGER_RTT.h"
 
-#if LOG_USE_RTOS
-static const stPortLogOps gPortLogRtosOps = {
-    .getRunTimeMs = repRtosGetTickMs,
-};
-#else
-static const stPortLogOps *gPortLogBoardOps = {
-    .getRunTimeMs = NULL,
-};
-#endif
-
-bool portLogRegisterOps(const stPortLogOps *ops)
+#if LOG_LINK_RTT_ENABLE
+static void logPortRttInit(void)
 {
-#if LOG_USE_RTOS
-    (void)ops;
-    return true;
-#else
-    if ((ops == NULL) || (ops->getRunTimeMs == NULL)) {
-        return false;
-    }
-
-    gPortLogBoardOps = ops;
-    return true;
-#endif
+    SEGGER_RTT_Init();
+    /* SKIP keeps line boundaries: a line that does not fit is dropped as a whole. */
+    (void)SEGGER_RTT_SetFlagsUpBuffer(0U, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
 }
 
-const stPortLogOps *portLogGetOps(void)
+static uint32_t logPortRttWrite(const uint8_t *data, uint32_t length)
 {
-#if LOG_USE_RTOS
-    return &gPortLogRtosOps;
-#else
-    return gPortLogBoardOps;
-#endif
+    return SEGGER_RTT_Write(0U, data, length);
 }
 
-uint32_t portLogGetRunTimeMs(void)
+static uint32_t logPortRttRead(uint8_t *data, uint32_t length)
 {
-    const stPortLogOps *lOps = portLogGetOps();
+    return SEGGER_RTT_Read(0U, data, length);
+}
 
-    if ((lOps == NULL) || (lOps->getRunTimeMs == NULL)) {
-        return 0U;
-    }
+static uint32_t logPortRttPending(void)
+{
+    return SEGGER_RTT_GetBytesInBuffer(0U);
+}
 
-    return lOps->getRunTimeMs();
+static const stLogPortOps gLogPortRttOps = {
+    .name = "rtt",
+    .init = logPortRttInit,
+    .write = logPortRttWrite,
+    .read = logPortRttRead,
+    .pending = logPortRttPending,
+};
+#endif
+
+/* A UART link needs gLogPortUartOps above, bound to a dedicated USART with stream TX (log.md). */
+static const stLogPortOps *const gLogPortLinks[LOG_LINK_COUNT] = {
+#if LOG_LINK_RTT_ENABLE
+    [LOG_LINK_RTT] = &gLogPortRttOps,
+#endif
+#if LOG_LINK_UART_ENABLE
+    [LOG_LINK_UART] = &gLogPortUartOps,
+#endif
+};
+
+const stLogPortOps *logPortGetOps(uint8_t linkId)
+{
+    /* Disabled or unknown links return NULL and are skipped by the core. */
+    return (linkId < LOG_LINK_COUNT) ? gLogPortLinks[linkId] : NULL;
+}
+
+uint32_t logPortGetTimeMs(void)
+{
+    return repRtosGetTickMs();
+}
+
+bool logPortIsInIsr(void)
+{
+    return __get_IPSR() != 0U;
 }
 
 /**************************End of file********************************/

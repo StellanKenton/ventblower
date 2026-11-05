@@ -11,6 +11,9 @@ target board.
 - `quick_deploy.py`: writes the VS Code Device Tool tasks and status-bar buttons,
   and forwards `build`/`flash`/`reset`/`rtt` to `device_tool.py`.
 - `device_tool_config.json`: per-computer tool paths and target settings.
+- `test_log.py`: host-side test of the log core and console in `User/module/log`. It
+  compiles `log.c` and `console.c` with a native GCC/Clang (or `CC`) against two fake
+  links; run `python3 User/develop/test_log.py` (`py -3` on Windows).
 - `ventblower.jdebug`: Ozone application debug project for `build/Debug/ventblower.elf`.
   Builds and normal flashing/reset/RTT operations use Device Tool as above.
   Ozone reset/download callbacks initialize SP, PC and VTOR from the application

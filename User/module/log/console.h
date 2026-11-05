@@ -1,7 +1,7 @@
 /************************************************************************************
 * @file     : console.h
-* @brief    : RTT console command interface.
-* @details  : Provides command binding types and the console processing entry.
+* @brief    : Console command interface.
+* @details  : Provides command binding types, line input processing and link draining.
 * @author   :
 * @date     :
 * @version  :
@@ -17,17 +17,26 @@
 extern "C" {
 #endif
 
-#define CONSOLE_COMMAND_MAX_LENGTH 256U
-#define CONSOLE_RTT_READ_BUFFER_SIZE 256U
-#define CONSOLE_REGISTERED_COMMAND_MAX 32U
+#ifndef CONSOLE_COMMAND_MAX_LENGTH
+#define CONSOLE_COMMAND_MAX_LENGTH      256U
+#endif
+#ifndef CONSOLE_READ_CHUNK_SIZE
+#define CONSOLE_READ_CHUNK_SIZE         32U
+#endif
+#ifndef CONSOLE_REGISTERED_COMMAND_MAX
+#define CONSOLE_REGISTERED_COMMAND_MAX  32U
+#endif
 
-typedef enum eConsoleCommandResult {
-    CONSOLE_COMMAND_RESULT_OK = 0,
-    CONSOLE_COMMAND_RESULT_INVALID_ARGUMENT,
-    CONSOLE_COMMAND_RESULT_ERROR,
-} eConsoleCommandResult;
+#define CONSOLE_STATUS_OK                   1
+#define CONSOLE_STATUS_INVALID_ARGUMENT     (-1)
+#define CONSOLE_STATUS_ERROR                (-2)
+#define CONSOLE_STATUS_DUPLICATE            (-3)
+#define CONSOLE_STATUS_FULL                 (-4)
+#define CONSOLE_STATUS_NO_LINK              (-5)
+#define CONSOLE_STATUS_TIMEOUT              (-6)
 
-typedef eConsoleCommandResult (*pfConsoleCommandHandler)(const char *arguments);
+/* Handlers return CONSOLE_STATUS_OK or a negative status. */
+typedef int8_t (*pfConsoleCommandHandler)(const char *arguments);
 
 /* Command descriptors must remain valid for the entire console lifetime. */
 typedef struct stConsoleCommand {
@@ -36,9 +45,22 @@ typedef struct stConsoleCommand {
     pfConsoleCommandHandler handler;
 } stConsoleCommand;
 
-bool consoleProcess(uint16_t TickMs);
-bool consoleRegisterCommand(const stConsoleCommand *command);
+/** Read pending input from CONSOLE_INPUT_LINK and run complete lines. Call from one task. */
+void consoleProcess(void);
+
+/** Register a command; returns CONSOLE_STATUS_OK or a negative status. */
+int8_t consoleRegisterCommand(const stConsoleCommand *command);
+
 void consoleShowHelp(void);
+
+/**
+ * @brief Busy-wait until the console link holds at most maxPending unsent bytes.
+ * @param maxPending Accepted backlog in bytes; 0 waits until everything is sent.
+ * @param timeoutMs Upper bound for the wait.
+ * @return CONSOLE_STATUS_OK, CONSOLE_STATUS_TIMEOUT or CONSOLE_STATUS_NO_LINK.
+ * @note Task context only (needs a running tick); keep it in the low-priority console task.
+ */
+int8_t consoleDrain(uint32_t maxPending, uint32_t timeoutMs);
 
 #ifdef __cplusplus
 }
