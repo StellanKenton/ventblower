@@ -1,7 +1,7 @@
 /************************************************************************************
 * @file     : blower_vcm.c
 * @brief    : VCM blower UART communication BSP.
-* @details  : Implements circular DMA reception, stream parsing, and reliable control TX.
+* @details  : Slave side: parses Core control frames, reports speed feedback via DMA TX.
 * @author   : Stellan
 * @date     :
 * @version  :
@@ -29,16 +29,14 @@ static volatile bool gBlowerVcmTxBusy = false;
 static volatile bool gBlowerVcmInitialized = false;
 static volatile bool gBlowerVcmRxOverflow = false;
 static volatile bool gBlowerVcmDmaCollecting = false;
-static bool gBlowerVcmLastControlValid = false;
-static eBlowerVcmControlMode gBlowerVcmLastMode = BLOWER_CTRL_INIT;
-static uint16_t gBlowerVcmLastTargetValue = 0U;
-static uint8_t gBlowerVcmLastSaturation = 0U;
+static uint16_t gBlowerVcmFeedbackSpeed = 0U;
+static uint8_t gBlowerVcmFeedbackSaturation = 0U;
 static uint32_t gBlowerVcmLastTxAtMs = 0U;
 static uint8_t gBlowerVcmParseState = BLOWER_VCM_PARSE_WAIT_HEADER;
 static uint8_t gBlowerVcmParseIndex = 0U;
 static uint8_t gBlowerVcmParseDataLength = 0U;
 static uint32_t gBlowerVcmProcessNowMs = 0U;
-static stBlowerVcmFeedback gBlowerVcmFeedback;
+static stBlowerVcmControl gBlowerVcmControl;
 static stBlowerVcmStats gBlowerVcmStats;
 
 static uint16_t blowerVcmCrc16(const uint8_t *data, uint8_t length)
@@ -87,32 +85,29 @@ static void blowerVcmParserReset(uint8_t candidate)
     gBlowerVcmParseDataLength = 0U;
 }
 
-static void blowerVcmFeedbackHandle(void)
+static void blowerVcmControlHandle(void)
 {
-    stBlowerVcmFeedback lFeedback;
-    uint16_t lSpeedScaled;
-    uint8_t lSaturation;
+    stBlowerVcmControl lControl;
 
-    if (gBlowerVcmParseDataLength != BLOWER_VCM_FEEDBACK_DATA_LENGTH) {
+    if (gBlowerVcmParseDataLength != BLOWER_VCM_CONTROL_DATA_LENGTH) {
         gBlowerVcmStats.rxLengthErrorCount++;
         return;
     }
-
-    lSpeedScaled = (uint16_t)gBlowerVcmParseBuffer[3] |
-                   ((uint16_t)gBlowerVcmParseBuffer[4] << 8U);
-    lSaturation = gBlowerVcmParseBuffer[5];
-    if (lSaturation > BLOWER_VCM_SATURATION_MAX) {
+    /* Data layout: mode, target low, target high, VCM saturation. */
+    if ((gBlowerVcmParseBuffer[3] >= (uint8_t)BLOWER_CTRL_MAX) ||
+        (gBlowerVcmParseBuffer[6] > BLOWER_VCM_SATURATION_MAX)) {
         gBlowerVcmStats.rxDataErrorCount++;
         return;
     }
 
-    lFeedback.speedScaled = lSpeedScaled;
-    lFeedback.speedRps = (float)lSpeedScaled / 10.0f;
-    lFeedback.pcmSaturation = lSaturation;
-    lFeedback.receivedAtMs = gBlowerVcmProcessNowMs;
-    lFeedback.valid = true;
+    lControl.mode = (eBlowerVcmControlMode)gBlowerVcmParseBuffer[3];
+    lControl.targetValue = (uint16_t)gBlowerVcmParseBuffer[4] |
+                           ((uint16_t)gBlowerVcmParseBuffer[5] << 8U);
+    lControl.vcmSaturation = gBlowerVcmParseBuffer[6];
+    lControl.receivedAtMs = gBlowerVcmProcessNowMs;
+    lControl.valid = true;
     repRtosEnterCritical();
-    gBlowerVcmFeedback = lFeedback;
+    gBlowerVcmControl = lControl;
     repRtosExitCritical();
     gBlowerVcmStats.rxFrameCount++;
 }
@@ -132,8 +127,8 @@ static void blowerVcmFrameHandle(void)
         return;
     }
 
-    if (gBlowerVcmParseBuffer[1] == BLOWER_VCM_CMD_SPEED_FEEDBACK) {
-        blowerVcmFeedbackHandle();
+    if (gBlowerVcmParseBuffer[1] == BLOWER_VCM_CMD_CONTROL) {
+        blowerVcmControlHandle();
     } else {
         gBlowerVcmStats.rxUnknownCommandCount++;
     }
@@ -151,7 +146,7 @@ static void blowerVcmParseByte(uint8_t data)
             break;
 
         case BLOWER_VCM_PARSE_COMMAND:
-            /* Keep the newest header when PCM emits repeated synchronization bytes. */
+            /* Resynchronize on the newest header when stray header bytes arrive. */
             if (data == BLOWER_VCM_FRAME_HEADER) {
                 gBlowerVcmParseBuffer[0] = data;
                 break;
@@ -161,11 +156,6 @@ static void blowerVcmParseByte(uint8_t data)
             break;
 
         case BLOWER_VCM_PARSE_LENGTH:
-            /* PCM may repeat the feedback command as part of its synchronization prefix. */
-            if ((gBlowerVcmParseBuffer[1] == BLOWER_VCM_CMD_SPEED_FEEDBACK) &&
-                (data == BLOWER_VCM_CMD_SPEED_FEEDBACK)) {
-                break;
-            }
             if (data > BLOWER_VCM_MAX_DATA_LENGTH) {
                 gBlowerVcmStats.rxLengthErrorCount++;
                 blowerVcmParserReset(data);
@@ -212,7 +202,7 @@ static void blowerVcmParseByte(uint8_t data)
 static int8_t blowerVcmProtocolSelfTest(void)
 {
     static const uint8_t lCrcVector[] = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
-    uint8_t lFrame[BLOWER_VCM_FEEDBACK_DATA_LENGTH + BLOWER_VCM_FRAME_OVERHEAD + 2U];
+    uint8_t lFrame[BLOWER_VCM_CONTROL_DATA_LENGTH + BLOWER_VCM_FRAME_OVERHEAD];
     uint16_t lCrc;
     uint8_t lIndex;
 
@@ -221,25 +211,25 @@ static int8_t blowerVcmProtocolSelfTest(void)
     }
 
     lFrame[0] = BLOWER_VCM_FRAME_HEADER;
-    lFrame[1] = BLOWER_VCM_FRAME_HEADER;
-    lFrame[2] = BLOWER_VCM_CMD_SPEED_FEEDBACK;
-    lFrame[3] = BLOWER_VCM_CMD_SPEED_FEEDBACK;
-    lFrame[4] = BLOWER_VCM_FEEDBACK_DATA_LENGTH;
-    lFrame[5] = 0xD2U;
-    lFrame[6] = 0x04U;
-    lFrame[7] = 1U;
-    lCrc = blowerVcmCrc16(&lFrame[3], 2U + BLOWER_VCM_FEEDBACK_DATA_LENGTH);
-    lFrame[8] = (uint8_t)(lCrc & 0xFFU);
-    lFrame[9] = (uint8_t)(lCrc >> 8U);
-    lFrame[10] = BLOWER_VCM_FRAME_TAIL;
+    lFrame[1] = BLOWER_VCM_CMD_CONTROL;
+    lFrame[2] = BLOWER_VCM_CONTROL_DATA_LENGTH;
+    lFrame[3] = (uint8_t)BLOWER_CTRL_SPEED;
+    lFrame[4] = 0xD2U;
+    lFrame[5] = 0x04U;
+    lFrame[6] = 1U;
+    lCrc = blowerVcmCrc16(&lFrame[1], 2U + BLOWER_VCM_CONTROL_DATA_LENGTH);
+    lFrame[7] = (uint8_t)(lCrc & 0xFFU);
+    lFrame[8] = (uint8_t)(lCrc >> 8U);
+    lFrame[9] = BLOWER_VCM_FRAME_TAIL;
     gBlowerVcmProcessNowMs = 42U;
     for (lIndex = 0U; lIndex < (uint8_t)sizeof(lFrame); lIndex++) {
         blowerVcmParseByte(lFrame[lIndex]);
     }
-    if ((!gBlowerVcmFeedback.valid) ||
-        (gBlowerVcmFeedback.speedScaled != 1234U) ||
-        (gBlowerVcmFeedback.pcmSaturation != 1U) ||
-        (gBlowerVcmFeedback.receivedAtMs != 42U) ||
+    if ((!gBlowerVcmControl.valid) ||
+        (gBlowerVcmControl.mode != BLOWER_CTRL_SPEED) ||
+        (gBlowerVcmControl.targetValue != 1234U) ||
+        (gBlowerVcmControl.vcmSaturation != 1U) ||
+        (gBlowerVcmControl.receivedAtMs != 42U) ||
         (gBlowerVcmStats.rxFrameCount != 1U)) {
         return BLOWER_VCM_ERROR_SELF_TEST;
     }
@@ -391,25 +381,18 @@ int8_t blowerVcmInit(void)
     gBlowerVcmTxBusy = false;
     gBlowerVcmRxOverflow = false;
     gBlowerVcmDmaCollecting = false;
-    gBlowerVcmLastControlValid = false;
+    gBlowerVcmFeedbackSpeed = 0U;
+    gBlowerVcmFeedbackSaturation = 0U;
     gBlowerVcmLastTxAtMs = 0U;
-    gBlowerVcmFeedback.speedRps = 0.0f;
-    gBlowerVcmFeedback.speedScaled = 0U;
-    gBlowerVcmFeedback.pcmSaturation = 0U;
-    gBlowerVcmFeedback.receivedAtMs = 0U;
-    gBlowerVcmFeedback.valid = false;
+    gBlowerVcmControl = (stBlowerVcmControl){0};
     blowerVcmParserReset(0U);
     if (blowerVcmProtocolSelfTest() != BLOWER_VCM_STATUS_OK) {
-        gBlowerVcmFeedback.valid = false;
+        gBlowerVcmControl = (stBlowerVcmControl){0};
         blowerVcmStatsClear();
         blowerVcmParserReset(0U);
         return BLOWER_VCM_ERROR_SELF_TEST;
     }
-    gBlowerVcmFeedback.speedRps = 0.0f;
-    gBlowerVcmFeedback.speedScaled = 0U;
-    gBlowerVcmFeedback.pcmSaturation = 0U;
-    gBlowerVcmFeedback.receivedAtMs = 0U;
-    gBlowerVcmFeedback.valid = false;
+    gBlowerVcmControl = (stBlowerVcmControl){0};
     gBlowerVcmProcessNowMs = 0U;
     blowerVcmStatsClear();
     blowerVcmParserReset(0U);
@@ -460,6 +443,45 @@ void blowerVcmDeInit(void)
     gBlowerVcmInitialized = false;
 }
 
+static void blowerVcmFeedbackSend(void)
+{
+    uint16_t lCrc;
+    uint8_t lSaturation;
+    uint16_t lSpeed;
+
+    if (gBlowerVcmTxBusy) {
+        gBlowerVcmStats.txBusyDropCount++;
+        return;
+    }
+    repRtosEnterCritical();
+    lSpeed = gBlowerVcmFeedbackSpeed;
+    lSaturation = gBlowerVcmFeedbackSaturation;
+    repRtosExitCritical();
+
+    gBlowerVcmTxBuffer[0] = BLOWER_VCM_FRAME_HEADER;
+    gBlowerVcmTxBuffer[1] = BLOWER_VCM_CMD_SPEED_FEEDBACK;
+    gBlowerVcmTxBuffer[2] = BLOWER_VCM_FEEDBACK_DATA_LENGTH;
+    gBlowerVcmTxBuffer[3] = (uint8_t)(lSpeed & 0xFFU);
+    gBlowerVcmTxBuffer[4] = (uint8_t)(lSpeed >> 8U);
+    gBlowerVcmTxBuffer[5] = lSaturation;
+    lCrc = blowerVcmCrc16(&gBlowerVcmTxBuffer[1], 2U + BLOWER_VCM_FEEDBACK_DATA_LENGTH);
+    gBlowerVcmTxBuffer[6] = (uint8_t)(lCrc & 0xFFU);
+    gBlowerVcmTxBuffer[7] = (uint8_t)(lCrc >> 8U);
+    gBlowerVcmTxBuffer[8] = BLOWER_VCM_FRAME_TAIL;
+
+    dma_channel_disable(DMA0, DMA_CH7);
+    dma_interrupt_flag_clear(DMA0, DMA_CH7, DMA_INT_FLAG_FEE);
+    dma_interrupt_flag_clear(DMA0, DMA_CH7, DMA_INT_FLAG_SDE);
+    dma_interrupt_flag_clear(DMA0, DMA_CH7, DMA_INT_FLAG_TAE);
+    dma_interrupt_flag_clear(DMA0, DMA_CH7, DMA_INT_FLAG_FTF);
+    dma_memory_address_config(DMA0, DMA_CH7, DMA_MEMORY_0, (uint32_t)gBlowerVcmTxBuffer);
+    dma_transfer_number_config(DMA0, DMA_CH7, BLOWER_VCM_TX_DMA_SIZE);
+    gBlowerVcmTxBusy = true;
+    usart_flag_clear(UART4, USART_FLAG_TC);
+    dma_channel_enable(DMA0, DMA_CH7);
+    usart_dma_transmit_config(UART4, USART_TRANSMIT_DMA_ENABLE);
+}
+
 int8_t blowerVcmProcess(uint32_t nowMs)
 {
     uint16_t lCount = 0U;
@@ -483,99 +505,41 @@ int8_t blowerVcmProcess(uint32_t nowMs)
         blowerVcmParseByte(lData);
         lCount++;
     }
-    if (gBlowerVcmLastControlValid && !gBlowerVcmTxBusy &&
-        ((uint32_t)(nowMs - gBlowerVcmLastTxAtMs) >= BLOWER_VCM_CONTROL_KEEPALIVE_MS)) {
-        (void)blowerVcmSendControl(gBlowerVcmLastMode,
-                                  gBlowerVcmLastTargetValue,
-                                  gBlowerVcmLastSaturation);
+    if ((uint32_t)(nowMs - gBlowerVcmLastTxAtMs) >= BLOWER_VCM_FEEDBACK_PERIOD_MS) {
+        gBlowerVcmLastTxAtMs = nowMs;
+        blowerVcmFeedbackSend();
     }
     return BLOWER_VCM_STATUS_OK;
 }
 
-int8_t blowerVcmSendControl(eBlowerVcmControlMode mode, uint16_t targetValue, uint8_t vcmSaturation)
+int8_t blowerVcmSetFeedback(uint16_t speedScaled, uint8_t pcmSaturation)
 {
-    uint8_t lFrame[BLOWER_VCM_CONTROL_DATA_LENGTH + BLOWER_VCM_FRAME_OVERHEAD];
-    uint16_t lCrc;
-    uint8_t lFrameIndex;
-    uint8_t lRepeatIndex;
-
-    if (((uint32_t)mode >= (uint32_t)BLOWER_CTRL_MAX) ||
-        (vcmSaturation > BLOWER_VCM_SATURATION_MAX)) {
+    if (pcmSaturation > BLOWER_VCM_SATURATION_MAX) {
         return BLOWER_VCM_ERROR_INVALID_PARAM;
     }
-    if (!gBlowerVcmInitialized) {
-        return BLOWER_VCM_ERROR_NOT_READY;
-    }
-
-    lFrame[0] = BLOWER_VCM_FRAME_HEADER;
-    lFrame[1] = BLOWER_VCM_CMD_CONTROL;
-    lFrame[2] = BLOWER_VCM_CONTROL_DATA_LENGTH;
-    lFrame[3] = (uint8_t)mode;
-    lFrame[4] = (uint8_t)(targetValue & 0xFFU);
-    lFrame[5] = (uint8_t)(targetValue >> 8U);
-    lFrame[6] = vcmSaturation;
-    lCrc = blowerVcmCrc16(&lFrame[1], 2U + BLOWER_VCM_CONTROL_DATA_LENGTH);
-    lFrame[7] = (uint8_t)(lCrc & 0xFFU);
-    lFrame[8] = (uint8_t)(lCrc >> 8U);
-    lFrame[9] = BLOWER_VCM_FRAME_TAIL;
-
     repRtosEnterCritical();
-    if (gBlowerVcmLastControlValid &&
-        (gBlowerVcmLastMode == mode) &&
-        (gBlowerVcmLastTargetValue == targetValue) &&
-        (gBlowerVcmLastSaturation == vcmSaturation) &&
-        ((uint32_t)(gBlowerVcmProcessNowMs - gBlowerVcmLastTxAtMs) < BLOWER_VCM_CONTROL_KEEPALIVE_MS)) {
-        repRtosExitCritical();
-        return BLOWER_VCM_STATUS_OK;
-    }
-    if (gBlowerVcmTxBusy) {
-        gBlowerVcmStats.txBusyDropCount++;
-        repRtosExitCritical();
-        return BLOWER_VCM_ERROR_BUSY;
-    }
-    for (lRepeatIndex = 0U; lRepeatIndex < BLOWER_VCM_CONTROL_FRAME_COUNT; lRepeatIndex++) {
-        for (lFrameIndex = 0U; lFrameIndex < (uint8_t)sizeof(lFrame); lFrameIndex++) {
-            gBlowerVcmTxBuffer[(lRepeatIndex * (uint8_t)sizeof(lFrame)) + lFrameIndex] = lFrame[lFrameIndex];
-        }
-    }
-    dma_channel_disable(DMA0, DMA_CH7);
-    dma_interrupt_flag_clear(DMA0, DMA_CH7, DMA_INT_FLAG_FEE);
-    dma_interrupt_flag_clear(DMA0, DMA_CH7, DMA_INT_FLAG_SDE);
-    dma_interrupt_flag_clear(DMA0, DMA_CH7, DMA_INT_FLAG_TAE);
-    dma_interrupt_flag_clear(DMA0, DMA_CH7, DMA_INT_FLAG_FTF);
-    dma_memory_address_config(DMA0, DMA_CH7, DMA_MEMORY_0, (uint32_t)gBlowerVcmTxBuffer);
-    dma_transfer_number_config(DMA0, DMA_CH7, BLOWER_VCM_TX_DMA_SIZE);
-    gBlowerVcmTxBusy = true;
-    gBlowerVcmLastControlValid = true;
-    gBlowerVcmLastMode = mode;
-    gBlowerVcmLastTargetValue = targetValue;
-    gBlowerVcmLastSaturation = vcmSaturation;
-    gBlowerVcmLastTxAtMs = gBlowerVcmProcessNowMs;
-    usart_flag_clear(UART4, USART_FLAG_TC);
-    dma_channel_enable(DMA0, DMA_CH7);
-    usart_dma_transmit_config(UART4, USART_TRANSMIT_DMA_ENABLE);
+    gBlowerVcmFeedbackSpeed = speedScaled;
+    gBlowerVcmFeedbackSaturation = pcmSaturation;
     repRtosExitCritical();
     return BLOWER_VCM_STATUS_OK;
 }
 
 bool blowerVcmIsConnected(uint32_t nowMs)
 {
-    return gBlowerVcmFeedback.valid &&
-           ((uint32_t)(nowMs - gBlowerVcmFeedback.receivedAtMs) < BLOWER_VCM_FEEDBACK_TIMEOUT_MS);
+    stBlowerVcmControl lControl;
+
+    (void)blowerVcmGetControl(&lControl);
+    return lControl.valid &&
+           ((uint32_t)(nowMs - lControl.receivedAtMs) < BLOWER_VCM_CONTROL_TIMEOUT_MS);
 }
 
-bool blowerVcmIsTxBusy(void)
+int8_t blowerVcmGetControl(stBlowerVcmControl *control)
 {
-    return gBlowerVcmTxBusy;
-}
-
-int8_t blowerVcmGetFeedback(stBlowerVcmFeedback *feedback)
-{
-    if (feedback == NULL) {
+    if (control == NULL) {
         return BLOWER_VCM_ERROR_INVALID_PARAM;
     }
     repRtosEnterCritical();
-    *feedback = gBlowerVcmFeedback;
+    *control = gBlowerVcmControl;
     repRtosExitCritical();
     return BLOWER_VCM_STATUS_OK;
 }
@@ -613,7 +577,7 @@ void UART4_IRQHandler(void)
         usart_interrupt_disable(UART4, USART_INT_TC);
         usart_interrupt_flag_clear(UART4, USART_INT_FLAG_TC);
         gBlowerVcmTxBusy = false;
-        gBlowerVcmStats.txFrameCount += BLOWER_VCM_CONTROL_FRAME_COUNT;
+        gBlowerVcmStats.txFrameCount++;
     }
 }
 

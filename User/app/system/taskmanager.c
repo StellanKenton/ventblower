@@ -1,7 +1,7 @@
 /************************************************************************************
 * @file     : taskmanager.c
 * @brief    : Project task wiring.
-* @details  : Creates the default, sensor and system worker tasks.
+* @details  : Creates the default, comm, system, motor and protect worker tasks.
 * @author   : Stellan
 * @date     :
 * @version  :
@@ -19,12 +19,16 @@
 static const char *const gTaskManagerTag = "taskManager";
 static bool gWorkerTasksCreated = false;
 static repRtosTaskHandle gDefaultTaskHandle = NULL;
-static repRtosTaskHandle gSensorTaskHandle = NULL;
+static repRtosTaskHandle gCommTaskHandle = NULL;
 static repRtosTaskHandle gSysTaskHandle = NULL;
+static repRtosTaskHandle gMotorTaskHandle = NULL;
+static repRtosTaskHandle gProtectTaskHandle = NULL;
 
 static void defaultTask(void *argument);
-static void sensorTask(void *argument);
+static void commTask(void *argument);
 static void sysTask(void *argument);
+static void motorTask(void *argument);
+static void protectTask(void *argument);
 static int8_t taskManagerCreateTask(const stRepRtosTaskConfig *config);
 
 static const stRepRtosTaskConfig gWorkerTaskConfigs[] = {
@@ -37,12 +41,12 @@ static const stRepRtosTaskConfig gWorkerTaskConfigs[] = {
         .handle = &gDefaultTaskHandle,
     },
     {
-        .name = "SensorTask",
-        .entry = sensorTask,
+        .name = "CommTask",
+        .entry = commTask,
         .argument = NULL,
-        .stackSize = SENSOR_TASK_STACK_SIZE,
-        .priority = SENSOR_TASK_PRIORITY,
-        .handle = &gSensorTaskHandle,
+        .stackSize = COMM_TASK_STACK_SIZE,
+        .priority = COMM_TASK_PRIORITY,
+        .handle = &gCommTaskHandle,
     },
     {
         .name = "SysTask",
@@ -51,6 +55,22 @@ static const stRepRtosTaskConfig gWorkerTaskConfigs[] = {
         .stackSize = SYS_TASK_STACK_SIZE,
         .priority = SYS_TASK_PRIORITY,
         .handle = &gSysTaskHandle,
+    },
+    {
+        .name = "MotorTask",
+        .entry = motorTask,
+        .argument = NULL,
+        .stackSize = MOTOR_TASK_STACK_SIZE,
+        .priority = MOTOR_TASK_PRIORITY,
+        .handle = &gMotorTaskHandle,
+    },
+    {
+        .name = "ProtectTask",
+        .entry = protectTask,
+        .argument = NULL,
+        .stackSize = PROTECT_TASK_STACK_SIZE,
+        .priority = PROTECT_TASK_PRIORITY,
+        .handle = &gProtectTaskHandle,
     },
 };
 
@@ -68,8 +88,8 @@ static void defaultTask(void *argument)
     }
 }
 
-/** Service the blower link (feedback parse and control keepalive). */
-static void sensorTask(void *argument)
+/** Service the Core link (control parse and periodic speed feedback). */
+static void commTask(void *argument)
 {
     uint32_t lPreviousWakeMs;
 
@@ -83,7 +103,7 @@ static void sensorTask(void *argument)
 
     for (;;) {
         (void)blowerVcmProcess(repRtosGetTickMs());
-        (void)repRtosTaskDelayUntilMs(&lPreviousWakeMs, SENSOR_TASK_INTERVAL_MS);
+        (void)repRtosTaskDelayUntilMs(&lPreviousWakeMs, COMM_TASK_INTERVAL_MS);
     }
 }
 
@@ -95,6 +115,30 @@ static void sysTask(void *argument)
 
     for (;;) {
         (void)repRtosTaskDelayUntilMs(&lPreviousWakeMs, SYS_TASK_INTERVAL_MS);
+    }
+}
+
+/** Speed loop and motor state machine (app/motor), fed by the Hall speed. */
+static void motorTask(void *argument)
+{
+    uint32_t lPreviousWakeMs = repRtosGetTickMs();
+
+    (void)argument;
+
+    for (;;) {
+        (void)repRtosTaskDelayUntilMs(&lPreviousWakeMs, MOTOR_TASK_INTERVAL_MS);
+    }
+}
+
+/** VBUS, NTC, stall and link-timeout checks (app/protect); trips the power stage. */
+static void protectTask(void *argument)
+{
+    uint32_t lPreviousWakeMs = repRtosGetTickMs();
+
+    (void)argument;
+
+    for (;;) {
+        (void)repRtosTaskDelayUntilMs(&lPreviousWakeMs, PROTECT_TASK_INTERVAL_MS);
     }
 }
 

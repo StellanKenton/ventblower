@@ -1,7 +1,7 @@
 /************************************************************************************
 * @file     : bspdebug.c
 * @brief    : BSP debug console command implementation.
-* @details  : Reads raw ADC samples, sets proportional valve duty and controls the blower.
+* @details  : Reads raw ADC samples and inspects the Core blower link.
 * @author   : Stellan
 * @date     :
 * @version  :
@@ -116,7 +116,7 @@ static bool bspDebugUint16Parse(const char *token, uint32_t length, uint16_t max
 static void bspDebugUsageShow(void)
 {
     LOG_I(gBspDebugTag, "adc: bsp a|adc");
-    LOG_I(gBspDebugTag, "blower: bsp blower <speed 0-800|pwm 0-100|stats>");
+    LOG_I(gBspDebugTag, "blower: bsp blower <stats|speed 0-800>");
 }
 
 /**
@@ -144,7 +144,7 @@ static int8_t bspDebugAdcCommand(const char *arguments)
 }
 
 /**
- * @brief Handle a VCM blower speed or PWM control request.
+ * @brief Show the Core link state or override the reported speed feedback.
  * @param arguments Arguments following the blower subcommand.
  * @return Console command result.
  */
@@ -155,10 +155,8 @@ static int8_t bspDebugBlowerCommand(const char *arguments)
     uint32_t lModeLength;
     uint32_t lValueLength;
     uint16_t lValue;
-    uint16_t lTarget;
-    eBlowerVcmControlMode lMode;
     stBlowerVcmStats lStats;
-    stBlowerVcmFeedback lFeedback;
+    stBlowerVcmControl lControl;
 
     if (!bspDebugTokenRead(&arguments, &lModeToken, &lModeLength)) {
         bspDebugUsageShow();
@@ -168,12 +166,14 @@ static int8_t bspDebugBlowerCommand(const char *arguments)
     if (bspDebugTokenEqual(lModeToken, lModeLength, "stats") &&
         !bspDebugTokenRead(&arguments, &lValueToken, &lValueLength)) {
         (void)blowerVcmGetStats(&lStats);
-        (void)blowerVcmGetFeedback(&lFeedback);
+        (void)blowerVcmGetControl(&lControl);
         LOG_I(gBspDebugTag,
-              "blower link connected=%u valid=%u speed_x10=%u rx_bytes=%lu rx_frames=%lu tx_frames=%lu",
+              "blower link connected=%u valid=%u mode=%u target=%u sat=%u rx_bytes=%lu rx_frames=%lu tx_frames=%lu",
               blowerVcmIsConnected(repRtosGetTickMs()) ? 1U : 0U,
-              lFeedback.valid ? 1U : 0U,
-              (unsigned int)lFeedback.speedScaled,
+              lControl.valid ? 1U : 0U,
+              (unsigned int)lControl.mode,
+              (unsigned int)lControl.targetValue,
+              (unsigned int)lControl.vcmSaturation,
               (unsigned long)lStats.rxByteCount,
               (unsigned long)lStats.rxFrameCount,
               (unsigned long)lStats.txFrameCount);
@@ -190,32 +190,17 @@ static int8_t bspDebugBlowerCommand(const char *arguments)
               (unsigned long)lStats.txBusyDropCount);
         return CONSOLE_STATUS_OK;
     }
-    if (!bspDebugTokenRead(&arguments, &lValueToken, &lValueLength) ||
-        bspDebugTokenRead(&arguments, &lValueToken, &lValueLength)) {
+    if (!bspDebugTokenEqual(lModeToken, lModeLength, "speed") ||
+        !bspDebugTokenRead(&arguments, &lValueToken, &lValueLength) ||
+        bspDebugTokenRead(&arguments, &lValueToken, &lValueLength) ||
+        !bspDebugUint16Parse(lValueToken, lValueLength, BSP_DEBUG_BLOWER_SPEED_MAX_RPS, &lValue)) {
         bspDebugUsageShow();
         return CONSOLE_STATUS_INVALID_ARGUMENT;
     }
 
-    if (bspDebugTokenEqual(lModeToken, lModeLength, "speed") &&
-        bspDebugUint16Parse(lValueToken, lValueLength, BSP_DEBUG_BLOWER_SPEED_MAX_RPS, &lValue)) {
-        lMode = BLOWER_CTRL_SPEED;
-        lTarget = lValue;
-    } else if (bspDebugTokenEqual(lModeToken, lModeLength, "pwm") &&
-               bspDebugUint16Parse(lValueToken, lValueLength, BSP_DEBUG_BLOWER_PWM_MAX_PERCENT, &lValue)) {
-        lMode = BLOWER_CTRL_PWM;
-        lTarget = (uint16_t)(lValue * BSP_DEBUG_BLOWER_PWM_SCALE);
-    } else {
-        bspDebugUsageShow();
-        return CONSOLE_STATUS_INVALID_ARGUMENT;
-    }
-
-    /* SensorTask keeps the last control frame alive through blowerVcmProcess(). */
-    if (blowerVcmSendControl(lMode, (uint16_t)(lTarget * 10U), 0U) != BLOWER_VCM_STATUS_OK) {
-        LOG_E(gBspDebugTag, "blower control send failed");
-        return CONSOLE_STATUS_ERROR;
-    }
-    LOG_I(gBspDebugTag, "blower %s %u", (lMode == BLOWER_CTRL_SPEED) ? "speed" : "pwm",
-          (unsigned int)lValue);
+    /* Link bring-up only: the motor loop will own this value once it reports real speed. */
+    (void)blowerVcmSetFeedback((uint16_t)(lValue * 10U), 0U);
+    LOG_I(gBspDebugTag, "blower feedback speed %u", (unsigned int)lValue);
     return CONSOLE_STATUS_OK;
 }
 
