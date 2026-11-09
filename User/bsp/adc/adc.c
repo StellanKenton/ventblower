@@ -1,7 +1,8 @@
 /************************************************************************************
 * @file     : adc.c
 * @brief    : Board ADC acquisition driver.
-* @details  : ADC0/1/2 inserted groups sample U/V/W together on the TIMER0 CH3 trigger.
+* @details  : ADC0/1 inserted groups sample two of the U/V/W phases together on the
+*             TIMER0 CH3 trigger; the current callback picks the phase to skip.
 *             ADC1 routine scan with DMA1 circular mode samples VBUS and NTC.
 * @author   : Stellan
 * @date     :
@@ -20,7 +21,19 @@
 
 volatile uint16_t gAdcRaw[ADC_CH_COUNT];
 
+static const uint32_t gAdcCurrentList[ADC_SAMPLED_PHASE_COUNT] = {ADC0, ADC1};
+/* Indexed by eAdcChannel phase slots. PC5/PB0/PB1 are only routed to ADC0 and ADC1. */
+static const uint8_t gAdcPhaseChannel[ADC_PHASE_COUNT] = {ADC_CHANNEL_15, ADC_CHANNEL_8, ADC_CHANNEL_9};
+/* Sampled phases per skipped phase, in gAdcCurrentList order. */
+static const eAdcChannel gAdcPhasePair[ADC_PHASE_COUNT][ADC_SAMPLED_PHASE_COUNT] = {
+    {ADC_CH_IV, ADC_CH_IW},
+    {ADC_CH_IU, ADC_CH_IW},
+    {ADC_CH_IU, ADC_CH_IV}
+};
+
 static pfAdcCurrentCallback gAdcCurrentCallback = NULL;
+/* Phase left out of the armed conversion. Only changes in the ISR once running. */
+static eAdcChannel gAdcSkipPhase = ADC_CH_IW;
 
 static void adcGpioInit(void)
 {
@@ -71,28 +84,39 @@ static void adcRoutineInit(void)
     adc_dma_mode_enable(ADC1);
 }
 
+/** Arm the two phases sampled on the next trigger. */
+static void adcCurrentPairSelect(eAdcChannel skipPhase)
+{
+    uint8_t lIndex;
+
+    for (lIndex = 0U; lIndex < ADC_SAMPLED_PHASE_COUNT; ++lIndex) {
+        adc_inserted_channel_config(gAdcCurrentList[lIndex], 0U,
+                                    gAdcPhaseChannel[gAdcPhasePair[skipPhase][lIndex]], ADC_SAMPLETIME_15);
+    }
+    gAdcSkipPhase = skipPhase;
+}
+
 static void adcCurrentInit(void)
 {
-    static const uint32_t lAdcList[ADC_PHASE_COUNT] = {ADC2, ADC0, ADC1};
-    static const uint8_t lChannelList[ADC_PHASE_COUNT] = {ADC_CHANNEL_15, ADC_CHANNEL_8, ADC_CHANNEL_9};
-    uint8_t lPhase;
+    uint8_t lIndex;
 
-    /* Same trigger and sample time on every ADC keeps the three conversions aligned. */
-    for (lPhase = 0U; lPhase < ADC_PHASE_COUNT; ++lPhase) {
-        uint32_t lAdc = lAdcList[lPhase];
+    /* Same trigger and sample time on both ADCs keeps the two conversions aligned. */
+    for (lIndex = 0U; lIndex < ADC_SAMPLED_PHASE_COUNT; ++lIndex) {
+        uint32_t lAdc = gAdcCurrentList[lIndex];
 
         adc_resolution_config(lAdc, ADC_RESOLUTION_12B);
         adc_data_alignment_config(lAdc, ADC_DATAALIGN_RIGHT);
         adc_channel_length_config(lAdc, ADC_INSERTED_CHANNEL, 1U);
-        adc_inserted_channel_config(lAdc, 0U, lChannelList[lPhase], ADC_SAMPLETIME_15);
         adc_external_trigger_source_config(lAdc, ADC_INSERTED_CHANNEL, ADC_EXTTRIG_INSERTED_T0_CH3);
         adc_external_trigger_config(lAdc, ADC_INSERTED_CHANNEL, EXTERNAL_TRIGGER_RISING);
         adc_enable(lAdc);
         adc_calibration_enable(lAdc);
     }
+    adcCurrentPairSelect(gAdcSkipPhase);
 
-    adc_interrupt_flag_clear(ADC0, ADC_INT_FLAG_EOIC);
-    adc_interrupt_enable(ADC0, ADC_INT_EOIC);
+    /* ADC1 may start late when it preempts its routine scan, so it finishes last. */
+    adc_interrupt_flag_clear(ADC1, ADC_INT_FLAG_EOIC);
+    adc_interrupt_enable(ADC1, ADC_INT_EOIC);
     NVIC_SetPriority(ADC_IRQn, ADC_CURRENT_IRQ_PRIORITY);
     NVIC_EnableIRQ(ADC_IRQn);
 }
@@ -102,7 +126,6 @@ void adcInit(void)
     adcGpioInit();
     rcu_periph_clock_enable(RCU_ADC0);
     rcu_periph_clock_enable(RCU_ADC1);
-    rcu_periph_clock_enable(RCU_ADC2);
     adc_deinit();
     adc_sync_mode_config(ADC_SYNC_MODE_INDEPENDENT);
     adc_clock_config(ADC_ADCCK_PCLK2_DIV8);
@@ -119,19 +142,24 @@ void adcCurrentCallbackSet(pfAdcCurrentCallback callback)
     gAdcCurrentCallback = callback;
 }
 
-/** ADC0 EOIC fires once per PWM period; ADC1/ADC2 finish on the same ADC clock edge. */
+/** ADC1 EOIC fires once per PWM period, after ADC0 has finished too. */
 void ADC_IRQHandler(void)
 {
-    if (adc_interrupt_flag_get(ADC0, ADC_INT_FLAG_EOIC) == RESET) {
+    const eAdcChannel *lPair = gAdcPhasePair[gAdcSkipPhase];
+
+    if (adc_interrupt_flag_get(ADC1, ADC_INT_FLAG_EOIC) == RESET) {
         return;
     }
-    adc_interrupt_flag_clear(ADC0, ADC_INT_FLAG_EOIC);
+    adc_interrupt_flag_clear(ADC1, ADC_INT_FLAG_EOIC);
 
-    gAdcRaw[ADC_CH_IU] = adc_inserted_data_read(ADC2, ADC_INSERTED_CHANNEL_0);
-    gAdcRaw[ADC_CH_IV] = adc_inserted_data_read(ADC0, ADC_INSERTED_CHANNEL_0);
-    gAdcRaw[ADC_CH_IW] = adc_inserted_data_read(ADC1, ADC_INSERTED_CHANNEL_0);
+    gAdcRaw[lPair[0]] = adc_inserted_data_read(ADC0, ADC_INSERTED_CHANNEL_0);
+    gAdcRaw[lPair[1]] = adc_inserted_data_read(ADC1, ADC_INSERTED_CHANNEL_0);
     if (gAdcCurrentCallback != NULL) {
-        gAdcCurrentCallback();
+        eAdcChannel lNextSkip = gAdcCurrentCallback(gAdcSkipPhase);
+
+        if (((uint8_t)lNextSkip < ADC_PHASE_COUNT) && (lNextSkip != gAdcSkipPhase)) {
+            adcCurrentPairSelect(lNextSkip);
+        }
     }
 }
 

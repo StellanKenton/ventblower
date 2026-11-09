@@ -14,6 +14,8 @@
 #include "taskmanager.h"
 #include "adc.h"
 #include "bspdebug.h"
+#include "drvCurrent.h"
+#include "drvCurrentDebug.h"
 #include "hall.h"
 #include "pwm.h"
 
@@ -29,6 +31,9 @@ int main(void)
     if (bspDebugConsoleRegister() != CONSOLE_STATUS_OK) {
         LOG_W(gMainTag, "bspdebug console registration failed");
     }
+    if (drvCurrentDebugConsoleRegister() != CONSOLE_STATUS_OK) {
+        LOG_W(gMainTag, "drvCurrent console registration failed");
+    }
 #endif
 
     LOG_R("*****************************************");
@@ -36,6 +41,7 @@ int main(void)
     LOG_R("*****************************************");
     /* Bsp initialization: ADC first, TIMER0 in pwmInit() starts current sampling. */
     adcInit();
+    drvCurrentInit();
     pwmInit();
     hallInit();
 

@@ -35,6 +35,8 @@ add_executable(ventblower
     User/bsp/hall/hall.c
     User/bsp/pwm/pwm.c
     User/bsp/uart/uart.c
+    User/driver/current/drvCurrent.c
+    User/driver/current/drvCurrentDebug.c
     User/module/log/console.c
     User/module/log/log.c
     User/module/log/portlog.c
@@ -67,6 +69,7 @@ target_include_directories(ventblower PRIVATE
     User/bsp/hall
     User/bsp/pwm
     User/bsp/uart
+    User/driver/current
     User/module/log
     User/module/log/SEGGER
     User/module/rtos

@@ -18,19 +18,25 @@ extern "C" {
 
 /* Raw sample slots: phase currents first, then the routine scan channels. */
 typedef enum eAdcChannel {
-    ADC_CH_IU = 0,      /* PC5, ADC2 IN15, inserted */
-    ADC_CH_IV,          /* PB0, ADC0 IN8, inserted */
-    ADC_CH_IW,          /* PB1, ADC1 IN9, inserted */
+    ADC_CH_IU = 0,      /* PC5, IN15, inserted */
+    ADC_CH_IV,          /* PB0, IN8, inserted */
+    ADC_CH_IW,          /* PB1, IN9, inserted */
     ADC_CH_VBUS,        /* PA5, ADC1 IN5, routine */
     ADC_CH_NTC,         /* PC3, ADC1 IN13, routine */
     ADC_CH_COUNT
 } eAdcChannel;
 
-/* Callback run in ADC_IRQHandler after each PWM-triggered current sample. */
-typedef void (*pfAdcCurrentCallback)(void);
+/*
+ * Callback run in ADC_IRQHandler after each PWM-triggered current sample.
+ * skipPhase is the phase not sampled this period; its gAdcRaw slot holds an old value.
+ * Returns the phase to skip on the next period.
+ */
+typedef eAdcChannel (*pfAdcCurrentCallback)(eAdcChannel skipPhase);
 
 #define ADC_CURRENT_IRQ_PRIORITY    1U
 #define ADC_PHASE_COUNT             ((uint8_t)ADC_CH_VBUS)
+/* All phase pins are on ADC0/1 only, so two phases can be sampled at once. */
+#define ADC_SAMPLED_PHASE_COUNT     2U
 #define ADC_ROUTINE_COUNT           ((uint8_t)(ADC_CH_COUNT - ADC_CH_VBUS))
 
 extern volatile uint16_t gAdcRaw[ADC_CH_COUNT];
@@ -45,6 +51,7 @@ void adcInit(void);
  * @brief Register the current loop hook.
  * @param callback Hook called from ADC_IRQHandler, or NULL to detach.
  * @note The hook runs above configMAX_SYSCALL_INTERRUPT_PRIORITY and must not call RTOS APIs.
+ * @note An invalid return value keeps the current skipped phase. Without a hook, IW is never sampled.
  */
 void adcCurrentCallbackSet(pfAdcCurrentCallback callback);
 
