@@ -1,9 +1,9 @@
 /************************************************************************************
 * @file     : pwm.h
-* @brief    : Three-phase complementary PWM and blower 26 V power stage enable.
+* @brief    : Three-phase complementary PWM and blower 28 V power stage enable.
 * @details  : TIMER0 CH0/1/2 + CH0N/1N/2N on PE9/PE11/PE13 + PE8/PE10/PE12,
 *             center-aligned with dead time; CH3 triggers phase current sampling.
-*             PE15 switches the blower 26 V supply.
+*             PE15 switches the blower 28 V supply.
 * @author   : Stellan
 * @date     :
 * @version  :
@@ -32,7 +32,7 @@ extern "C" {
 #define PWM_SAMPLE_POINT        (PWM_PERIOD - 1U)
 
 /**
- * @brief Configure TIMER0, start the counter with outputs held off, keep 26 V disabled.
+ * @brief Configure TIMER0, start the counter with outputs held off, keep 28 V disabled.
  * @note The counter runs immediately so ADC current offsets can be calibrated
  * before outputs are enabled.
  */
@@ -55,7 +55,7 @@ void pwmOutputSet(bool enable);
 void pwmDutySet(uint16_t u, uint16_t v, uint16_t w);
 
 /**
- * @brief Switch the blower 26 V supply on PE15.
+ * @brief Switch the blower 28 V supply on PE15.
  * @param enable true to power the bridge.
  */
 void pwmPowerSet(bool enable);

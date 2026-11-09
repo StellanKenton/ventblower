@@ -1,6 +1,6 @@
 /************************************************************************************
 * @file     : pwm.c
-* @brief    : Three-phase complementary PWM and blower 26 V power stage enable.
+* @brief    : Three-phase complementary PWM and blower 28 V power stage enable.
 * @details  : TIMER0 center-aligned PWM, active-high gates, idle low; CH3 is the
 *             ADC inserted trigger. Counter halts with the core under debug.
 * @author   : Stellan
@@ -15,7 +15,7 @@
 #include "gd32f4xx_rcu.h"
 #include "gd32f4xx_timer.h"
 
-/** Hold 26 V off and pull gate pins low before TIMER0 owns them. */
+/** Hold 28 V off and pull gate pins low before TIMER0 owns them. */
 static void pwmGpioInit(void) {
     rcu_periph_clock_enable(RCU_GPIOE);
 
